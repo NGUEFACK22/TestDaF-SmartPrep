@@ -1,0 +1,44 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source "../**/*.blade.php";
+@source "../**/*.js";
+@source "../**/*.vue";
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* ----------------------------- Examen : styles ----------------------------- */
+.exam-shell {
+    min-height: 100vh;
+    background: #f8fafc;
+}
+
+.exam-timer-bar {
+    transition: width 0.9s linear;
+}
+
+.exam-timer-bar.warning {
+    background-color: #f59e0b !important;
+}
+
+.exam-timer-bar.danger {
+    background-color: #dc2626 !important;
+}
+
+.question-option.selected {
+    border-color: #2563eb;
+    background-color: #eff6ff;
+}
+
+.recording-pulse {
+    animation: pulse-red 1.2s infinite;
+}
+
+@keyframes pulse-red {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
