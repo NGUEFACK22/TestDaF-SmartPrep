@@ -59,6 +59,15 @@ class PreparationController extends Controller
             'successRate' => $successRate,
             'skillResults' => $skillResults,
             'courses' => config("testdaf.exercise_types.$skill", []),
+            'c1' => config("testdaf.c1.skill.$skill", []),
+            'c1Global' => [
+                'philosophy' => config('testdaf.c1.philosophy'),
+                'exam_rule' => config('testdaf.c1.exam_rule'),
+                'modes' => config('testdaf.c1.modes', []),
+                'progression' => config('testdaf.c1.progression', []),
+                'target' => config('testdaf.tdn.target'),
+            ],
+            'sprechTargets' => config('testdaf.sprechen.targets', []),
         ]);
     }
 }

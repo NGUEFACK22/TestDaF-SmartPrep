@@ -89,6 +89,12 @@
         @if ($exercise->instruction)
             <p class="text-sm text-slate-600 mt-2 whitespace-pre-line">{{ $exercise->instruction }}</p>
         @endif
+        @if ($skill === \App\Enums\Skill::Sprechen && isset(config('testdaf.sprechen.targets')[$exercise->type]))
+            <p class="text-xs text-violet-700 bg-violet-50 rounded-lg px-3 py-1.5 mt-2 inline-block">
+                Objectif : ~{{ Format::clock(config('testdaf.sprechen.targets')[$exercise->type]) }} de parole
+                (+ {{ Format::clock(config('testdaf.sprechen.prep_seconds_default', 60)) }} de préparation)
+            </p>
+        @endif
         @if (! empty($exercise->content['text']))
             <div class="mt-4 bg-white border border-slate-200 rounded-xl p-4 text-sm leading-relaxed whitespace-pre-line">{{ $exercise->content['text'] }}</div>
         @endif

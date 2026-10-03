@@ -33,15 +33,21 @@
                 <div class="flex items-center justify-between">
                     <h2 class="font-semibold">{{ $skill->label() }}</h2>
                     @if ($result)
-                        <span class="text-lg font-bold">{{ Format::percent($result->percentage, 0) }}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-medium rounded-full bg-slate-100 px-2.5 py-0.5 text-slate-600">{{ Format::number($result->points20, 1) }} / 20</span>
+                            <span class="text-lg font-bold">{{ Format::percent($result->percentage, 0) }}</span>
+                        </div>
                     @else
                         <span class="text-sm text-slate-400">Analyse en cours…</span>
                     @endif
                 </div>
                 @if ($result)
-                    <p class="text-sm text-slate-500 mt-1">
-                        {{ Format::number($result->points, 1) }} / {{ Format::number($result->max_points, 1) }} points
-                    </p>
+                    <div class="flex items-center justify-between mt-1">
+                        <p class="text-sm text-slate-500">
+                            {{ Format::number($result->points, 1) }} / {{ Format::number($result->max_points, 1) }} points
+                        </p>
+                        <p class="text-sm text-slate-700">TDN estimé : <strong>{{ $result->tdn }}</strong></p>
+                    </div>
                     <div class="mt-3 h-2 rounded-full bg-slate-100 overflow-hidden">
                         <div class="h-full rounded-full bg-blue-600" style="width: {{ min(100, $result->percentage) }}%"></div>
                     </div>
@@ -49,6 +55,11 @@
             </div>
         @endforeach
     </div>
+
+    <p class="text-xs text-slate-400 mt-2">
+        Échelle 0–20 du TestDaF appliquée séparément à chaque partie (0–4 sous TDN 3 · 5–9 TDN 3 · 10–15 TDN 4 · 16–20 TDN 5).
+        Objectif C1 : 16–20 points sur chaque compétence. Estimation pédagogique — jamais une note officielle TestDaF.
+    </p>
 
     <div class="bg-white border border-slate-200 rounded-2xl p-5 mt-6">
         <h2 class="font-semibold mb-3">Correction détaillée (Lesen / Hören)</h2>

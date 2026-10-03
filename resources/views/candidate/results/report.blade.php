@@ -30,11 +30,22 @@
                 <div class="text-sm text-slate-400">{{ $skill->label() }}</div>
                 <div class="text-2xl font-bold">{{ $result ? Format::percent($result->percentage, 0) : '—' }}</div>
                 <div class="text-xs text-slate-400 mt-1">
-                    {{ $result ? Format::number($result->points, 1).' / '.Format::number($result->max_points, 1) : 'Analyse en cours…' }}
+                    {{ $result ? Format::number($result->points, 1).' / '.Format::number($result->max_points, 1).' points · '.Format::number($result->points20, 1).' / 20' : 'Analyse en cours…' }}
                 </div>
+                @if ($result)
+                    <div class="mt-2 inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                        TDN estimé : {{ $result->tdn }}
+                    </div>
+                @endif
             </div>
         @endforeach
     </div>
+
+    <p class="text-xs text-slate-400 mt-2">
+        Le TestDaF évalue chaque partie séparément (pas de note globale officielle).
+        Échelle 0–20 : 0–4 sous TDN 3 · 5–9 TDN 3 · 10–15 TDN 4 · 16–20 TDN 5.
+        Estimation pédagogique — jamais une note officielle TestDaF.
+    </p>
 
     <div class="bg-white border border-slate-200 rounded-2xl p-5 mt-6">
         <h2 class="font-semibold mb-3">Erreurs fréquentes</h2>

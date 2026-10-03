@@ -41,18 +41,26 @@ class AiEvaluation extends Model
         return $this->status === 'completed';
     }
 
-    /** Score pédagogique indicatif (jamais une note officielle TestDaF). */
+    /**
+     * Score pédagogique indicatif (moyenne des critères de la grille de la
+     * compétence, jamais une note officielle TestDaF).
+     */
     public function indicatorScore(): ?float
     {
         if (! is_array($this->result)) {
             return null;
         }
 
-        $keys = ['task_completion', 'structure', 'vocabulary', 'grammar', 'coherence'];
-        $values = array_filter(
-            array_intersect_key($this->result, array_flip($keys)),
-            fn ($v) => is_numeric($v)
-        );
+        $criteria = config('testdaf.ai.rubric.'.(string) $this->skill, []);
+
+        if (is_array($criteria) && $criteria !== []) {
+            $values = array_filter(
+                array_intersect_key($this->result, array_flip(array_keys($criteria))),
+                fn ($v) => is_numeric($v)
+            );
+        } else {
+            $values = array_filter($this->result, fn ($v) => is_numeric($v));
+        }
 
         return $values === [] ? null : round(array_sum($values) / count($values), 2);
     }

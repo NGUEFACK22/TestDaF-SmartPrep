@@ -71,12 +71,17 @@ class SpeakingEvaluationService
     private function systemPrompt(): string
     {
         $max = (int) config('testdaf.ai.rubric_max', 20);
+        $criteria = array_keys(config('testdaf.ai.rubric.sprechen', []));
+
+        $fields = implode(', ', array_map(
+            fn (string $key) => "{$key} (0-{$max})",
+            $criteria
+        ));
 
         return 'Du bist ein erfahrener TestDaF-Prüfer und bewertest einen mündlichen Beitrag '
             .'(Hinweis: dies ist keine offizielle TestDaF-Note). Bewerte NICHT das Aussehen der Person. '
             .'Antworte NUR mit gültigem JSON mit den Feldern: '
-            ."task_completion (0-{$max}), structure (0-{$max}), vocabulary (0-{$max}), "
-            ."grammar (0-{$max}), coherence (0-{$max}), fluency (0-{$max}), feedback (string), "
+            ."$fields, feedback (string), "
             .'strengths (array), weaknesses (array), recommendations (array).';
     }
 

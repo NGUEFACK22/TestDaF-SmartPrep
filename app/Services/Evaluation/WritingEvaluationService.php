@@ -49,12 +49,17 @@ class WritingEvaluationService
     private function systemPrompt(): string
     {
         $max = (int) config('testdaf.ai.rubric_max', 20);
+        $criteria = array_keys(config('testdaf.ai.rubric.schreiben', []));
+
+        $fields = implode(', ', array_map(
+            fn (string $key) => "{$key} (0-{$max})",
+            $criteria
+        ));
 
         return 'Du bist ein erfahrener TestDaF-Prüfer. Bewerte den folgenden Schreibtext '
             .'ausschließlich pädagogisch (Hinweis: dies ist keine offizielle TestDaF-Note). '
             .'Antworte NUR mit gültigem JSON mit den Feldern: '
-            ."task_completion (0-{$max}), structure (0-{$max}), vocabulary (0-{$max}), "
-            ."grammar (0-{$max}), coherence (0-{$max}), feedback (string), "
+            ."$fields, feedback (string), "
             .'strengths (array), weaknesses (array), recommendations (array).';
     }
 

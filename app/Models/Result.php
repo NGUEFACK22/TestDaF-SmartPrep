@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\Skill;
+use App\Services\Exam\TdnService;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,5 +29,29 @@ class Result extends Model
     public function attempt(): BelongsTo
     {
         return $this->belongsTo(Attempt::class);
+    }
+
+    /**
+     * Score converti sur l'échelle 0–20 du TestDaF (indicatif,
+     * jamais une note officielle TestDaF).
+     */
+    protected function points20(): Attribute
+    {
+        return new Attribute(
+            get: fn () => app(TdnService::class)->points20((float) $this->percentage)
+        );
+    }
+
+    /**
+     * Niveau TDN estimé (bande) pour cette compétence :
+     * sous TDN 3 / TDN 3 / TDN 4 / TDN 5.
+     */
+    protected function tdn(): Attribute
+    {
+        return new Attribute(
+            get: fn () => app(TdnService::class)->bandLabel(
+                app(TdnService::class)->points20((float) $this->percentage)
+            )
+        );
     }
 }
