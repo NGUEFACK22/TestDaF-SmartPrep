@@ -17,6 +17,8 @@ class DatabaseSeeder extends Seeder
             SettingSeeder::class,
             ModellTestSeeder::class,
             ModellTestMediaSeeder::class,
+            HoerenDemoSeeder::class,
+
         ]);
     }
 }

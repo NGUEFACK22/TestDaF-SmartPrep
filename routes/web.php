@@ -68,6 +68,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.readAll');
 
     // Entraînement autonome (correction immédiate, sans chronomètre)
+    Route::get('/training/hoeren', [TrainingController::class, 'hoeren'])->name('training.hoeren');
     Route::get('/training/exercises/{exercise}', [TrainingController::class, 'show'])->name('training.show');
 
     // Médias privés (accès contrôlé)

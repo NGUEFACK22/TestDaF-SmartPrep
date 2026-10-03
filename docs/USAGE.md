@@ -7,6 +7,8 @@
 ```
 / (Accueil) → /register (inscription) → /login → /dashboard
 → /preparation/{lesen|hoeren|schreiben|sprechen} (entraînement libre)
+→ /training/hoeren (les 7 tâches officielles Hörverstehen — démos TestDaF digital)
+
 → /modelltests (liste des 10 tests) → /exam/{attempt} (passage)
 → /results/{attempt} → /results/{attempt}/report (rapport détaillé)
 ```
@@ -18,6 +20,12 @@ Progression par compétence (Lesen / Hören / Schreiben / Sprechen), dernier tes
 ### Espaces de préparation (`/preparation/{competence}`)
 
 Cours/méthodes/conseils + exercices classés par difficulté (A2→C1). Chaque exercice s'ouvre en **mode entraînement** (`/training/exercises/{id}`) : sans chronomètre, avec indices, correction immédiate et possibilité de recommencer.
+
+### Démos officielles Hören (`/training/hoeren`)
+
+Les **7 tâches officielles Hörverstehen** du TestDaF digital (matériel pédagogique public du TestDaF Institute) : pour chaque type de tâche, écoute/visionnage de la **démo officielle** (audio ou vidéo), **consigne officielle** (DE), description et structure de la tâche (FR), durée indicative calibrée sur le fichier de démo (+ phase de vérification officielle lorsqu'elle est documentée), **conseils C1** et **ressources externes** (TestDaF, ÖSD, telc, Goethe).
+
+Mode entraînement : **non noté, sans chronomètre** — ces démos ne font partie d'aucun Modelltest. Import : `php artisan db:seed --class=HoerenDemoSeeder` (fichiers dans `content/media/hoeren_demo/`, seeder idempotent).
 
 ### Passer un Modelltest (mode examen)
 

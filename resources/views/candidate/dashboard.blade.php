@@ -72,7 +72,7 @@
         </div>
     </div>
 
-    <div class="grid md:grid-cols-3 gap-4 mt-6">
+    <div class="grid md:grid-cols-4 gap-4 mt-6">
         <div class="bg-white border border-slate-200 rounded-2xl p-5">
             <div class="text-sm text-slate-400">Tests commencés</div>
             <div class="text-2xl font-bold">{{ $overview['started'] }}</div>
@@ -84,6 +84,13 @@
         <div class="bg-white border border-slate-200 rounded-2xl p-5">
             <div class="text-sm text-slate-400">Score moyen</div>
             <div class="text-2xl font-bold">{{ Format::number($overview['average'], 1) }}</div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col justify-between gap-3">
+            <div>
+                <div class="text-sm text-slate-400">Entraînement officiel</div>
+                <div class="text-2xl font-bold">Hören — 7 démos</div>
+            </div>
+            <a href="{{ route('training.hoeren') }}" class="text-sm text-blue-600 hover:underline">Écouter les démos officielles →</a>
         </div>
     </div>
 

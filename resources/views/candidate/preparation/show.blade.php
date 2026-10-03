@@ -42,6 +42,19 @@
         @endif
     </div>
 
+    @if ($skill->value === 'hoeren')
+        <div class="bg-sky-50 border border-sky-200 rounded-2xl p-5 mt-6">
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                    <h2 class="font-semibold mb-1">🎧 Les 7 tâches officielles Hörverstehen (TestDaF digital)</h2>
+                    <p class="text-sm text-slate-600">Écoutez et regardez les démos officielles du TestDaF Institute (matériel pédagogique public), une par type de tâche : consigne officielle, structure, durées, conseils C1 et ressources d'entraînement.</p>
+                </div>
+                <a href="{{ route('training.hoeren') }}" class="rounded-lg bg-sky-600 text-white px-4 py-2 text-sm font-medium hover:bg-sky-700 whitespace-nowrap">Accéder aux démos →</a>
+            </div>
+        </div>
+    @endif
+
+
     @if (! empty($c1))
         <div class="bg-white border border-slate-200 rounded-2xl p-5 mt-6">
             <h2 class="font-semibold mb-1">{{ $c1['title'] ?? '' }}</h2>

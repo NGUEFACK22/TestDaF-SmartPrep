@@ -28,3 +28,6 @@ yarn-error.log
 
 # Reference locale (document public TestDaF Institute, non distribue avec le depot)
 /Beispielaufgaben_Demo-Version_digitaler_TestDaF_Lesen.pdf
+
+# Materiaux locaux de reference (demos officielles TestDaF/Goethe/OeSD/telc, sources C1, captures UI officielles) — non distribues avec le depot
+/materiels
