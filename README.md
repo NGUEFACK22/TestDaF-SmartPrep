@@ -1,4 +1,4 @@
-# TestDaF Preparation Platform
+# TestDaF-SmartPrep
 
 Plateforme web de préparation au **TestDaF digital** construite avec **Laravel 12** (PHP ≥ 8.2) + frontend Blade/JavaScript (build Vite).
 
