@@ -50,6 +50,7 @@ return [
             'instruction' => 'Fassen Sie die wichtigsten Informationen des Lesetextes zum studentischen Wohnen zusammen und nehmen Sie Stellung: Ist das Wohnen im Wohnheim für internationale Studierende empfehlenswert? Schreiben Sie ca. 180 Wörter.',
             'source' => 'Studentisches Wohnen in Deutschland: Rund 60 % der internationalen Studierenden wohnen in Wohnheimen. Vorteile sind die niedrigen Kosten und die sozialen Kontakte. Nachteile sind Lärm und wenig Privatsphäre.',
             'graphic' => 'Umfrage: 60 % Wohnheim, 25 % Wohngemeinschaft, 15 % eigene Wohnung.',
+            'chart' => ['title' => 'Wohnformen internationaler Studierender', 'labels' => ['Wohnheim', 'Wohngemeinschaft', 'eigene Wohnung'], 'values' => [60, 25, 15]],
         ],
         'sprechen' => [
             [
@@ -116,6 +117,7 @@ return [
             'instruction' => 'Fassen Sie die Argumente des Textes zum digitalen Studium zusammen und diskutieren Sie: Sollte das Studium künftig überwiegend online stattfinden? Schreiben Sie ca. 180 Wörter.',
             'source' => 'Digitales Studium: Online-Vorlesungen sind flexibel und jederzeit abrufbar. Nachteile sind fehlender Kontakt und geringere Motivation. Viele Hochschulen setzen auf Blended Learning.',
             'graphic' => 'Umfrage: 55 % bevorzugen eine Kombination, 25 % reine Präsenz, 20 % reines Online-Studium.',
+            'chart' => ['title' => 'Bevorzugte Studienform', 'labels' => ['Kombination (blended)', 'reine Präsenz', 'reines Online-Studium'], 'values' => [55, 25, 20]],
         ],
         'sprechen' => [
             [
@@ -170,6 +172,7 @@ return [
             'instruction' => 'Fassen Sie die Informationen zu erneuerbaren Energien zusammen und nehmen Sie Stellung: Sollte Deutschland vollständig auf erneuerbare Energien setzen? Schreiben Sie ca. 180 Wörter.',
             'source' => 'Erneuerbare Energien versorgen immer mehr Haushalte. Probleme sind Kosten, Wetterabhängigkeit und Speicherung.',
             'graphic' => 'Energiemix: 45 % erneuerbar, 30 % Kohle/Gas, 25 % sonstige.',
+            'chart' => ['title' => 'Aktueller Energiemix', 'labels' => ['erneuerbar', 'Kohle/Gas', 'sonstige'], 'values' => [45, 30, 25]],
         ],
         'sprechen' => [
             ['title' => 'Aufgabe 1 — Optionen abwägen', 'instruction' => 'Fahrrad oder öffentlicher Verkehr? Wägen Sie die Optionen ab. Sprechen Sie ca. 60 Sekunden.', 'preparation' => 60, 'recording' => 90, 'duration' => 180],
@@ -212,6 +215,7 @@ return [
             'instruction' => 'Fassen Sie die Informationen zur Ernährung zusammen und diskutieren Sie: Sollten Mensen nur gesunde Gerichte anbieten? Schreiben Sie ca. 180 Wörter.',
             'source' => 'Mensen bieten mehr vegetarische Gerichte an. Gesunde Ernährung verbessert die Konzentration. Viele essen aus Zeitmangel Fast Food.',
             'graphic' => 'Befragung: 50 % regelmäßig in der Mensa, 30 % gelegentlich, 20 % nie.',
+            'chart' => ['title' => 'Mensa-Nutzung', 'labels' => ['regelmäßig', 'gelegentlich', 'nie'], 'values' => [50, 30, 20]],
         ],
         'sprechen' => [
             ['title' => 'Aufgabe 1 — Rat geben', 'instruction' => 'Ein Kommilitone ernährt sich ungesund. Geben Sie ihm einen Rat. Sprechen Sie ca. 60 Sekunden.', 'preparation' => 60, 'recording' => 90, 'duration' => 180],
@@ -254,6 +258,7 @@ return [
             'instruction' => 'Fassen Sie die Informationen zum Stadtverkehr zusammen und nehmen Sie Stellung: Sollte der Autoverkehr in Innenstädten verboten werden? Schreiben Sie ca. 180 Wörter.',
             'source' => 'Der öffentliche Verkehr ist schnell und günstig. Viele fahren dennoch Auto. Gefordert werden mehr Fahrradwege und billigere Tickets.',
             'graphic' => 'Verkehrsmittel: 40 % ÖPNV, 30 % Fahrrad, 20 % Auto, 10 % zu Fuß.',
+            'chart' => ['title' => 'Verkehrsmittel im Alltag', 'labels' => ['ÖPNV', 'Fahrrad', 'Auto', 'zu Fuß'], 'values' => [40, 30, 20, 10]],
         ],
         'sprechen' => [
             ['title' => 'Aufgabe 1 — Maßnahmen kritisieren', 'instruction' => 'Ihre Stadt plant höhere Parkgebühren. Kritisieren oder verteidigen Sie die Maßnahme. Sprechen Sie ca. 60 Sekunden.', 'preparation' => 60, 'recording' => 90, 'duration' => 180],

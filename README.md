@@ -12,7 +12,7 @@ Accueil → inscription → connexion → préparation/entraînement
 
 ## Fonctionnalités
 
-- **10 Modelltests complets** (thèmes universitaires originaux, contenus démo fournis en seeder) + bibliothèque d'exercices réutilisables.
+- **10 Modelltests complets** (thèmes universitaires originaux, contenus démo fournis en seeder) : Hörtexte **audios** (MP3 générés, voix allemande) + **Grafiken** (bar charts Chart.js) + bibliothèque d'exercices réutilisables.
 - **Moteur d'examen à autorité serveur** : chaque tâche possède sa durée en base (`duration_seconds`) ; le serveur calcule `expires_at = started_at + duration_seconds` et refuse toute réponse hors délai. Le chronomètre JavaScript n'est qu'un affichage : il est impossible de contourner le verrouillage en modifiant le JS, l'URL, l'horloge locale ou en envoyant des requêtes manuelles (testé par les tests AntiCheat).
 - **Navigation séquentielle stricte** : ordre imposé (Aufgabe 1 → 2 → …), pas de retour en arrière, passage automatique à l'expiration.
 - **12 types de questions** rendus par un moteur générique (`QuestionRenderer`) : `multiple_choice`, `single_choice`, `true_false`, `matching`, `ordering`, `fill_blank`, `short_answer`, `category_assignment`, `pair_assignment`, `text_input`, `essay`, `audio_response`, `video_response`.

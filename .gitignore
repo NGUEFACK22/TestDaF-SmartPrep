@@ -10,8 +10,11 @@
 .env.backup
 .env.production
 /database/*.sqlite
+_*
 .phpactor.json
+*.log
 .phpunit.result.cache
+/database/*.sqlite-journal
 Homestead.json
 Homestead.yaml
 npm-debug.log
@@ -22,3 +25,6 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Reference locale (document public TestDaF Institute, non distribue avec le depot)
+/Beispielaufgaben_Demo-Version_digitaler_TestDaF_Lesen.pdf

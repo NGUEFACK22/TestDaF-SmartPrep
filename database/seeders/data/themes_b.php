@@ -38,6 +38,7 @@ return [
             'instruction' => 'Fassen Sie die Informationen zum Praktikum zusammen und diskutieren Sie: Sollte ein Praktikum für alle Studiengänge Pflicht sein? Schreiben Sie ca. 180 Wörter.',
             'source' => 'Praktika bieten Erfahrung und Kontakte. Viele Firmen übernehmen Praktikanten. Wichtig sind frühe Bewerbung und ein deutsches Anschreiben.',
             'graphic' => 'Übernahmequote: 40 % der Praktikanten erhalten ein Angebot.',
+            'chart' => ['title' => 'Übergang nach dem Praktikum', 'labels' => ['erhalten ein Arbeitsangebot', 'kein Angebot'], 'values' => [40, 60]],
         ],
         'sprechen' => [
             ['title' => 'Aufgabe 1 — Rat geben', 'instruction' => 'Ein Freund sucht ein Praktikum. Geben Sie ihm Tipps. Sprechen Sie ca. 60 Sekunden.', 'preparation' => 60, 'recording' => 90, 'duration' => 180],
@@ -80,6 +81,7 @@ return [
             'instruction' => 'Fassen Sie die Informationen zu sozialen Medien im Studium zusammen und diskutieren Sie: Fördern soziale Medien das Lernen? Schreiben Sie ca. 180 Wörter.',
             'source' => 'Lernvideos und Foren ergänzen Vorlesungen. Risiken sind Ablenkung und Falschinformationen. Medienkompetenz wird empfohlen.',
             'graphic' => 'Nutzung: 70 % Lernvideos, 50 % Foren, 30 % Podcasts.',
+            'chart' => ['title' => 'Mediennutzung zum Lernen', 'labels' => ['Lernvideos', 'Foren', 'Podcasts'], 'values' => [70, 50, 30]],
         ],
         'sprechen' => [
             ['title' => 'Aufgabe 1 — Text zusammenfassen', 'instruction' => 'Fassen Sie einen kurzen Artikel über Medienkompetenz zusammen. Sprechen Sie ca. 60 Sekunden.', 'preparation' => 60, 'recording' => 90, 'duration' => 180],
@@ -122,6 +124,7 @@ return [
             'instruction' => 'Fassen Sie die Informationen zum Kulturangebot zusammen und nehmen Sie Stellung: Ist Kultur wichtig für internationale Studierende? Schreiben Sie ca. 180 Wörter.',
             'source' => 'Museen und Theater bieten Ermäßigungen. Sprachcafés und Sportvereine fördern Kontakte und Sprache.',
             'graphic' => 'Freizeit: 45 % Sport, 30 % Kultur, 25 % Sonstiges.',
+            'chart' => ['title' => 'Freizeitaktivitäten von Studierenden', 'labels' => ['Sport', 'Kultur', 'sonstiges'], 'values' => [45, 30, 25]],
         ],
         'sprechen' => [
             ['title' => 'Aufgabe 1 — Rat geben', 'instruction' => 'Ein neuer Student kennt niemanden. Geben Sie ihm Freizeittipps. Sprechen Sie ca. 60 Sekunden.', 'preparation' => 60, 'recording' => 90, 'duration' => 180],
@@ -164,6 +167,7 @@ return [
             'instruction' => 'Fassen Sie die Informationen zur Hochschulforschung zusammen und diskutieren Sie: Sollten Studierende früh forschen? Schreiben Sie ca. 180 Wörter.',
             'source' => 'Hochschulen forschen innovativ. Förderprogramme unterstützen junge Forschende. Aus Projekten entstehen Start-ups und Arbeitsplätze.',
             'graphic' => 'Drittmittel: 55 % Staat, 30 % Wirtschaft, 15 % Sonstige.',
+            'chart' => ['title' => 'Drittmittel der Hochschulforschung', 'labels' => ['Staat', 'Wirtschaft', 'sonstige'], 'values' => [55, 30, 15]],
         ],
         'sprechen' => [
             ['title' => 'Aufgabe 1 — Rat geben', 'instruction' => 'Eine Freundin möchte an einem Forschungsprojekt teilnehmen. Geben Sie ihr einen Rat. Sprechen Sie ca. 60 Sekunden.', 'preparation' => 60, 'recording' => 90, 'duration' => 180],
@@ -206,6 +210,7 @@ return [
             'instruction' => 'Fassen Sie die Informationen zum interkulturellen Zusammenleben zusammen und nehmen Sie Stellung: Fördert das Studium im Ausland die Persönlichkeit? Schreiben Sie ca. 180 Wörter.',
             'source' => 'Internationale Programme fördern Austausch. Sprachbarrieren und Heimweh sind Herausforderungen. Beratung und Mentoren helfen.',
             'graphic' => 'Herkunft: 40 % Europa, 35 % Asien, 15 % Afrika, 10 % Amerika.',
+            'chart' => ['title' => 'Herkunft internationaler Studierender', 'labels' => ['Europa', 'Asien', 'Afrika', 'Amerika'], 'values' => [40, 35, 15, 10]],
         ],
         'sprechen' => [
             ['title' => 'Aufgabe 1 — Rat geben', 'instruction' => 'Ein neuer internationaler Student hat Heimweh. Geben Sie ihm einen Rat. Sprechen Sie ca. 60 Sekunden.', 'preparation' => 60, 'recording' => 90, 'duration' => 180],

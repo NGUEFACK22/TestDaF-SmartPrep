@@ -35,8 +35,18 @@ class MediaController extends Controller
     private function authorizeAccess(Request $request, Media $media): void
     {
         $user = $request->user();
+
+        abort_unless($user, 403);
+
+        // Contenu d'examen public (Hörtexte, grafiques, médias d'exercices) :
+        // visible par tout candidat authentifié (le contexte d'examen est
+        // lui-même contrôlé par le moteur d'examen).
+        if (! empty($media->meta['public'])) {
+            return;
+        }
+
         $ownerId = (int) (($media->meta['uploaded_by'] ?? 0));
 
-        abort_unless($user && ($ownerId === $user->id || $user->isAdmin() || $user->isCorrector()), 403);
+        abort_unless($ownerId === $user->id || $user->isAdmin() || $user->isCorrector(), 403);
     }
 }

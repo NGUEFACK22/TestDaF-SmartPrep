@@ -184,6 +184,7 @@ class ModellTestSeeder extends Seeder
             'content' => [
                 'source_text' => $data['schreiben']['source'],
                 'graphic' => $data['schreiben']['graphic'],
+                'chart' => $data['schreiben']['chart'] ?? null,
             ],
             'solution_text' => 'Musterlösung: Zusammenfassung von Quelle und Grafik, gefolgt von einer begründeten Stellungnahme.',
             'explanation' => 'Gute Antwort fasst Quelle und Grafik zusammen und begründet eine Position.',

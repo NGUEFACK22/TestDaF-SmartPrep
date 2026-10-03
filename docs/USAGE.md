@@ -34,9 +34,13 @@ Règles du moteur d'examen (le serveur est l'autorité) :
 - **Réseau coupé / onglet fermé** : l'état est côté serveur. En reprenant, le serveur recalcule le temps restant (ou verrouille et passe à la suite si expiré).
 - Les réponses texte (Lesen, Kurzantwort) sont **autosauvegardées toutes les 10 s** — refusées par le serveur si la tâche est expirée.
 
+### Hören
+
+Le **Hörtext** est joué dans un **lecteur audio** (audio synthétique de la transcription originale, voix allemande `de-DE`) ; le transkript est affiché sous le lecteur. L'audio est servi depuis le **stockage privé** via `/media/{id}` (session requise, jamais de URL publique directe).
+
 ### Schreiben
 
-Éditeur de texte avec **compteur de mots**, affichage du sujet + texte source + graphique, autosave silencieux, fin automatique et **verrouillage du champ** à l'échéance.
+Éditeur de texte avec **compteur de mots**, affichage du sujet + texte source + **graphique** (bar chart Chart.js des données de la « Grafik »), autosave silencieux, fin automatique et **verrouillage du champ** à l'échéance.
 
 ### Sprechen
 

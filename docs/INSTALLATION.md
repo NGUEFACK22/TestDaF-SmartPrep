@@ -123,7 +123,7 @@ php artisan tinker --execute="echo DB::selectOne('select version() as v')->v;"
 php artisan migrate --seed
 ```
 
-Cela crée les **29 tables** puis exécute : `RoleSeeder` (rôles `candidate`/`admin`), `AdminUserSeeder` (comptes ci-dessous), `SettingSeeder` (réglages IA par défaut), `ModellTestSeeder` (**10 Modelltests complets** : Lesen, Hören, Schreiben, Sprechen, solutions et explications).
+Cela crée les **29 tables** puis exécute : `RoleSeeder` (rôles `candidate`/`admin`), `AdminUserSeeder` (comptes ci-dessous), `SettingSeeder` (réglages IA par défaut), `ModellTestSeeder` (**10 Modelltests complets** : Lesen, Hören, Schreiben, Sprechen, solutions, explications et données des « Grafik ») et `ModellTestMediaSeeder` (import des **10 audios Hörtext** livrés dans `content/media/horen/` vers le stockage privé, attache aux exercices Hörverstehen — idempotent).
 
 Comptes créés :
 

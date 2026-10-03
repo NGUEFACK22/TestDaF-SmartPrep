@@ -104,6 +104,17 @@
                 <img class="mt-4 max-h-96 rounded-xl" src="{{ route('media.stream', $media) }}" alt="Grafik">
             @endif
         @endforeach
+        @if (! empty($exercise->content['chart']))
+            <div class="mt-4 bg-white border border-slate-200 rounded-xl p-4">
+                @if (! empty($exercise->content['chart']['title']))
+                    <h3 class="text-sm font-semibold mb-1">{{ $exercise->content['chart']['title'] }}</h3>
+                @endif
+                <div class="relative h-56">
+                    <canvas data-chart="bar"
+                            data-series='@json(['labels' => $exercise->content['chart']['labels'] ?? [], 'values' => $exercise->content['chart']['values'] ?? []])'></canvas>
+                </div>
+            </div>
+        @endif
     </div>
 
     {{-- ------------------------------------------------ Lesen / Hören --}}
