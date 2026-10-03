@@ -78,6 +78,45 @@ DB_USERNAME=root
 DB_PASSWORD=mot_de_passe_mysql
 ```
 
+### Option : PostgreSQL (local ou Neon serverless)
+
+PostgreSQL classique :
+
+```env
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=testdaf
+DB_USERNAME=postgres
+DB_PASSWORD=mot_de_passe_postgres
+DB_SSLMODE=prefer
+```
+
+**Neon (PostgreSQL serverless, endpoint pooler)** : à partir de votre URL
+`postgresql://neondb_owner:npg_...@ep-XXXX-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require` :
+
+```env
+DB_CONNECTION=pgsql
+DB_HOST=ep-XXXX-pooler.c-7.us-east-2.aws.neon.tech
+DB_PORT=5432
+DB_DATABASE=neondb
+DB_USERNAME=neondb_owner
+DB_PASSWORD=npg_votre_cle_neon
+DB_SSLMODE=require
+DB_ENDPOINT=ep-XXXX
+```
+
+- `DB_ENDPOINT` = premier segment du hostname (ex. `ep-broad-queen-b5lqx7x0`) : le pooler Neon exige le SNI ; les builds PHP au libpq < 15.3 ne le font pas automatiquement, le connecteur `app/Database/Connectors/NeonPgsqlConnector.php` injecte donc `options=endpoint=<id>` dans le DSN (recherche : « Endpoint ID is not specified » si manquant).
+- `channel_binding=require` (présent dans les URLs Neon) n'est **pas** supporté par les builds XAMPP (libpq ancien) : `sslmode=require` reste imposé ; pour l'activer, utiliser un build PHP moderne (≥ 8.3) qui l'exposerait via le DSN.
+- Comportement « serverless » : la base se suspend après inactivité (Auto Suspend) — les premières requêtes après une pause prennent 10-90 s au réveil. Pour une démo continue, désactiver l'Auto Suspend dans la console Neon.
+- Les migrations/seeders (10 Modelltests) prennent ~5-10 min vers Neon à cause de la latence ; rien d'anormal.
+
+Vérifier la connexion :
+
+```bash
+php artisan tinker --execute="echo DB::selectOne('select version() as v')->v;"
+```
+
 ## 4. Migrations + données de démonstration
 
 ```bash

@@ -94,7 +94,10 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => 'prefer',
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
+            // Identifiant de l'endpoint pour les pools SNI (ex. Neon pooler) :
+            // première partie du hostname (voir NeonPgsqlConnector).
+            'endpoint' => env('DB_ENDPOINT'),
         ],
 
         'sqlsrv' => [

@@ -35,7 +35,7 @@ Accueil → inscription → connexion → préparation/entraînement
 | Couche | Technologie |
 |---|---|
 | Backend | PHP ≥ 8.2, Laravel 12 |
-| Base | SQLite (défaut, dev) ou MySQL (`.env`), migrations + seeders |
+| Base | SQLite (défaut, dev) ou PostgreSQL (local ou **Neon serverless** — `DB_ENDPOINT` + connecteur dédié) / MySQL |
 | Frontend | Blade + JavaScript vanilla (`resources/js/exam/*`), build Vite |
 | File de jobs | Laravel queue (`QUEUE_CONNECTION=database`) — `queue:work` pour les analyses IA |
 | Tests | PHPUnit (`php artisan test`) : moteur d'examen, auth, anti-contournement, médias, admin |
