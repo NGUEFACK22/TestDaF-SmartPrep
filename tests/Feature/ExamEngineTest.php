@@ -129,6 +129,35 @@ class ExamEngineTest extends TestCase
             ->save($attempt, $first, $question, ['A']);
     }
 
+    public function test_hoeren_exam_page_shows_audio_but_hides_the_transcript(): void
+    {
+        $this->seed(\Database\Seeders\ModellTestMediaSeeder::class);
+
+        $engine = app(ExamService::class);
+        $attempt = $engine->startAttempt($this->user, $this->test);
+
+        // Franchit les 2 tâches Lesen pour arriver à la tâche Hören.
+        $tasks = $attempt->attemptExercises()->orderBy('position')->get();
+        foreach ($tasks->take(2) as $task) {
+            $engine->startExercise($attempt, $task->exercise_id);
+            $engine->completeExercise($attempt, $task->exercise_id);
+        }
+
+        $hoeren = $tasks->get(2);
+        $this->assertSame(\App\Enums\Skill::Hoeren, $hoeren->exercise->skill);
+
+        $response = $this->actingAs($this->user)->get(route('exam.show', $attempt));
+        $response->assertOk();
+
+        // L'audio (Hörtext) est proposé…
+        $response->assertSee('<audio', false);
+        $hoeren->refresh();
+        $this->assertSame(\App\Enums\ExerciseState::Started, $hoeren->state());
+
+        // …mais le transcript n'est PAS affiché : la tâche est une vraie écoute.
+        $response->assertDontSee('Hast du schon eine Wohnung in Heidelberg', false);
+    }
+
     public function test_objective_scoring_counts_correct_answers(): void
     {
         $engine = app(ExamService::class);

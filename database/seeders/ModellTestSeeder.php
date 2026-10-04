@@ -153,11 +153,11 @@ class ModellTestSeeder extends Seeder
             'title' => 'Aufgabe 1 — Hörverstehen',
             'level' => 'B2',
             'difficulty' => 'B2',
-            'instruction' => 'Lesen Sie das Transkript (Hörtext) und beantworten Sie die Frage.',
+            'instruction' => 'Hören Sie den Hörtext und beantworten Sie die Frage.',
             'duration_seconds' => 300,
             'points' => 1,
             'position' => 0,
-            'content' => ['text' => $data['hoeren']['transcript']],
+            'content' => ['transcript' => $data['hoeren']['transcript']],
             'status' => 'published',
         ]);
         $section->exercises()->attach($exercise->id, ['position' => 0]);
