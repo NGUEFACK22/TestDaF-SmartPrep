@@ -133,6 +133,46 @@ class HoerenDemoTrainingTest extends TestCase
         $this->get(route('training.hoeren'))->assertRedirect();
     }
 
+    public function test_demos_official_questions_and_solutions_are_seeded(): void
+    {
+        $this->seed(HoerenDemoSeeder::class);
+
+        $specs = require base_path('database/seeders/data/hoeren_demo_questions.php');
+        $demos = $this->demoExercises()->load('questions.answerOptions');
+
+        $totalQuestions = 0;
+
+        foreach ($demos as $demo) {
+            $number = (int) $demo->content['demo_number'];
+            $spec = $specs[$number] ?? [];
+
+            $this->assertCount(
+                count($spec),
+                $demo->questions,
+                "Démo $number : nombre de questions officielles inattendu."
+            );
+
+            foreach ($demo->questions as $question) {
+                $totalQuestions++;
+
+                if ($question->answerOptions->isNotEmpty()) {
+                    $this->assertGreaterThanOrEqual(
+                        1,
+                        $question->answerOptions->where('is_correct', true)->count(),
+                        "Question {$question->id} (démo $number) avec options doit comporter au moins une bonne réponse."
+                    );
+                } else {
+                    $this->assertNotEmpty(
+                        (array) $question->correct_answer,
+                        "Question {$question->id} (démo $number) sans options doit porter sa réponse correcte (courte réponse / trou à compléter)."
+                    );
+                }
+            }
+        }
+
+        $this->assertGreaterThan(0, $totalQuestions, 'Les démos doivent porter des questions officielles.');
+    }
+
     private function demoExercises(): Collection
     {
         return Exercise::query()
