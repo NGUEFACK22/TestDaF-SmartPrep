@@ -10,90 +10,151 @@
  * tâche), explications en français.
  *
  * Sémantique de correction = moteur d'examen (ScoringService) :
- * - short_answer    : bonne si la réponse contient au moins un mot-clé
- *                     (correct_answer = liste de mots-clés) ;
- * - single_choice   : égalité exacte (libellé a/b/c/d) ;
- * - multiple_choice : équivalence d'ensembles (libellés des options) ;
+ * - single_choice   : QCM à une seule bonne réponse (libellé a/b/c/d) ;
+ * - multiple_choice : QCM multi-sélection (équivalence d'ensembles de libellés) ;
  * - data.segments   (T7) : texte avec mots-candidats cliquables (adaptation :
  *                     8 candidats au lieu de tous les mots du texte).
+ *
+ * Les tâches T1/T2/T5 (officiellement « Kurzantwort ») sont proposées en QCM
+ * (norme TestDaF digital : correction objective et automatique) ; la bonne
+ * réponse de chaque QCM = une solution officielle du PDF, les options
+ * (distracteurs) sont tirées du même contexte audio pour rester fidèles à
+ * la logique de la tâche originale.
  */
 return [
 
     // ------------------------------------------------------------------
-    // Démo 1 — Kurzantwort: Übersicht ergänzen (« Jobmesse für Ingenieure »)
-    // Les 5 réponses officielles du tableau : (die) Workshops, öffentlichen
-    // Dienst, USB-Stick, Raum 5, Vortrag.
+    // Démo 1 — QCM (adapté de « Kurzantwort: Übersicht ergänzen »)
+    // (« Jobmesse für Ingenieure » : 5 QCM, une seule bonne réponse chacun)
+    // Solutions officielles : Workshops, öffentlichen Dienst, USB-Stick,
+    // Raum 5, Vortrag.
     // ------------------------------------------------------------------
     1 => [
         [
-            'type' => 'short_answer',
-            'prompt' => 'Feld 1 — Anmeldung erforderlich für … (max. 2 Wörter)',
-            'correct_answer' => ['workshops'],
-            'data' => ['model' => '(die) Workshops'],
-            'explanation' => "La foire elle-même est ouverte (première édition, pas d'inscription) ; seuls les « Workshops » ont un nombre limité de places.",
+            'type' => 'single_choice',
+            'prompt' => 'Feld 1 — Die Anmeldung ist erforderlich für …',
+            'correct_answer' => 'b',
+            'data' => ['model' => 'b — (die) Workshops'],
+            'explanation' => "La foire elle-même est ouverte (1re édition) ; seuls les « Workshops » ont un nombre limité de places — il faut s'y inscrire.",
+            'options' => [
+                ['label' => 'a', 'text' => 'die gesamte Jobmesse'],
+                ['label' => 'b', 'text' => 'die Workshops'],
+                ['label' => 'c', 'text' => 'die Messehalle'],
+                ['label' => 'd', 'text' => 'das Mittagessen'],
+            ],
         ],
         [
-            'type' => 'short_answer',
-            'prompt' => 'Feld 2 — Präsentation am Dienstagvormittag — Thema: „Karriere im …“ (max. 2 Wörter)',
-            'correct_answer' => ['öffentlichen dienst', 'öffentlicher dienst'],
-            'data' => ['model' => 'öffentlichen Dienst'],
-            'explanation' => 'Sofie recommande une présentation sur les « Karrieremöglichkeiten im öffentlichen Dienst ».',
+            'type' => 'single_choice',
+            'prompt' => 'Feld 2 — Die Präsentation am Dienstagvormittag trägt den Titel: „Karriere im …“',
+            'correct_answer' => 'a',
+            'data' => ['model' => 'a — öffentlichen Dienst'],
+            'explanation' => "Sofie empfiehlt die Präsentation über Karrieremöglichkeiten im öffentlichen Dienst (Dienstagvormittag).",
+            'options' => [
+                ['label' => 'a', 'text' => 'öffentlichen Dienst'],
+                ['label' => 'b', 'text' => 'Fahrzeugbau'],
+                ['label' => 'c', 'text' => 'Robotik'],
+                ['label' => 'd', 'text' => 'Energieversorgung'],
+            ],
         ],
         [
-            'type' => 'short_answer',
-            'prompt' => 'Feld 3 — Workshop „Programmieren“ (Mittwochvormittag) — Bitte mitbringen:',
-            'correct_answer' => ['usb'],
-            'data' => ['model' => 'USB-Stick'],
-            'explanation' => "Avec un USB-Stick, les participants peuvent emporter les fichiers d'exercice chez eux.",
+            'type' => 'single_choice',
+            'prompt' => 'Feld 3 — Für die Workshops „Programmieren für Ingenieure“ müssen die Teilnehmenden … mitbringen.',
+            'correct_answer' => 'c',
+            'data' => ['model' => 'c — USB-Stick'],
+            'explanation' => "Avec un USB-Stick, les participants emportent les fichiers d'exercice de la séance.",
+            'options' => [
+                ['label' => 'a', 'text' => 'ihre Bewerbungsfotos'],
+                ['label' => 'b', 'text' => 'einen Auszug aus dem Lebenslauf'],
+                ['label' => 'c', 'text' => 'einen USB-Stick'],
+                ['label' => 'd', 'text' => 'eine aktuelle Zeitungsanzeige'],
+            ],
         ],
         [
-            'type' => 'short_answer',
-            'prompt' => 'Feld 4 — Workshop „Programmieren“ — Wo? (Gebäude C, …)',
-            'correct_answer' => ['raum 5'],
-            'data' => ['model' => 'Raum 5'],
+            'type' => 'single_choice',
+            'prompt' => 'Feld 4 — Die Workshops „Programmieren für Ingenieure“ finden in … statt.',
+            'correct_answer' => 'b',
+            'data' => ['model' => 'b — Raum 5'],
             'explanation' => 'Le workshop a lieu le mercredi matin dans la salle 5 du bâtiment C.',
+            'options' => [
+                ['label' => 'a', 'text' => 'Raum 25'],
+                ['label' => 'b', 'text' => 'Raum 5'],
+                ['label' => 'c', 'text' => 'Hörsaal 3'],
+                ['label' => 'd', 'text' => 'der Messehalle'],
+            ],
         ],
         [
-            'type' => 'short_answer',
-            'prompt' => 'Feld 5 — Am Dienstag: „… über Berufe in der Energieversorgung“ — welche Art von Termin ist das?',
-            'correct_answer' => ['vortrag'],
-            'data' => ['model' => 'Vortrag'],
+            'type' => 'single_choice',
+            'prompt' => 'Feld 5 — Am Dienstag steht zum Thema „Berufe in der Energieversorgung“ … auf dem Programm.',
+            'correct_answer' => 'c',
+            'data' => ['model' => 'c — Vortrag'],
             'explanation' => "Mardi, il y a une conférence (« Vortrag ») sur les métiers de l'approvisionnement énergétique.",
+            'options' => [
+                ['label' => 'a', 'text' => 'eine Diskussion'],
+                ['label' => 'b', 'text' => 'ein Workshop'],
+                ['label' => 'c', 'text' => 'ein Vortrag'],
+                ['label' => 'd', 'text' => 'eine Bewerbungsfotos-Präsentation'],
+            ],
         ],
     ],
 
     // ------------------------------------------------------------------
-    // Démo 2 — Kurzantwort: Textstellen zu Begriffspaar notieren
-    // (Podiumsdiskussion « Schulnoten » : Forderung + Argument / personne)
+    // Démo 2 — QCM (adapté de « Kurzantwort: Textstellen zu Begriffspaar
+    // notieren ») (Podiumsdiskussion « Schulnoten » : Forderung/Argument)
+    // Solutions officielles : Jansson — Abschaffung + Studie Israel ;
+    // Kruse — Kombination mit Kommentaren + Überblick/motivierend.
     // ------------------------------------------------------------------
     2 => [
         [
-            'type' => 'short_answer',
-            'prompt' => 'Frau Jansson — Forderung (Stichpunkte)',
-            'correct_answer' => ['abschaffen', 'berichte', 'gespräche'],
-            'data' => ['model' => 'Schulnoten abschaffen / Noten durch Entwicklungsgespräche oder schriftliche Berichte ersetzen'],
+            'type' => 'single_choice',
+            'prompt' => 'Frau Jansson — Welche Forderung stellt sie auf?',
+            'correct_answer' => 'b',
+            'data' => ['model' => 'b — Schulnoten abschaffen / durch Gespräche oder Berichte ersetzen'],
             'explanation' => 'Jansson veut abolir les notes : elles doivent être remplacées par des entretiens de développement ou des rapports écrits.',
+            'options' => [
+                ['label' => 'a', 'text' => 'Schulnoten sollten mit Kommentaren kombiniert werden.'],
+                ['label' => 'b', 'text' => 'Schulnoten sollten abgeschafft und durch Gespräche oder Berichte ersetzt werden.'],
+                ['label' => 'c', 'text' => 'Schulnoten sollten bei Studentinnen und Studenten abgeschafft werden.'],
+                ['label' => 'd', 'text' => 'Schulnoten sollten nur noch mündlich erteilt werden.'],
+            ],
         ],
         [
-            'type' => 'short_answer',
-            'prompt' => 'Frau Jansson — Argument (Stichpunkte)',
-            'correct_answer' => ['israel', 'demotivier'],
-            'data' => ['model' => 'Studie aus Israel: nur mit Feedback (ohne Note) wollten Schüler deutlich mehr Aufgaben lösen — Noten wirken demotivierend'],
+            'type' => 'single_choice',
+            'prompt' => 'Frau Jansson — Welches Argument führt sie an?',
+            'correct_answer' => 'b',
+            'data' => ['model' => 'b — Studie aus Israel: Noten wirken demotivierend'],
             'explanation' => "Ses argument : une étude (Israël) montre que les notes démotivent ; les élèves qui n'ont reçu que des retours voulaient faire plus d'exercices.",
+            'options' => [
+                ['label' => 'a', 'text' => 'Noten geben einen schnellen Überblick über die Leistung von Schülerinnen und Schülern.'],
+                ['label' => 'b', 'text' => 'Eine Studie aus Israel zeigt, dass Noten demotivierend wirken.'],
+                ['label' => 'c', 'text' => 'Noten sind leicht zu verstehen und motivierender als Berichte.'],
+                ['label' => 'd', 'text' => 'Noten sind ein wichtiger Anreiz für gute Leistungen an der Universität.'],
+            ],
         ],
         [
-            'type' => 'short_answer',
-            'prompt' => 'Herr Kruse — Forderung (Stichpunkte)',
-            'correct_answer' => ['kommentare', 'alleinstehen'],
-            'data' => ['model' => 'Noten sollten nicht alleinstehen — Noten immer mit Kommentaren verbinden (die Note als Zahl bleibt)'],
+            'type' => 'single_choice',
+            'prompt' => 'Herr Kruse — Welche Forderung stellt er auf?',
+            'correct_answer' => 'b',
+            'data' => ['model' => 'b — Noten sollten nicht alleinstehen, sondern mit Kommentaren verbunden werden'],
             'explanation' => "Kruse garde la note chiffrée, mais veut toujours l'associer à des commentaires qui montrent les erreurs et les points à améliorer.",
+            'options' => [
+                ['label' => 'a', 'text' => 'Schulnoten sollten abgeschafft werden.'],
+                ['label' => 'b', 'text' => 'Schulnoten sollten nicht alleinstehen, sondern immer mit Kommentaren verbunden werden.'],
+                ['label' => 'c', 'text' => 'Noten sollten durch schriftliche Berichte über die Leistungen ersetzt werden.'],
+                ['label' => 'd', 'text' => 'Schülerinnen und Schüler sollten ohne jede Bewertung auskommen.'],
+            ],
         ],
         [
-            'type' => 'short_answer',
-            'prompt' => 'Herr Kruse — Argument (Stichpunkte)',
-            'correct_answer' => ['überblick', 'motivier', 'rückmeldung'],
-            'data' => ['model' => 'Die Note zeigt auf einen Blick, ob sich die Leistung verbessert oder verschlechtert hat — einfach zu verstehen und motivierender'],
+            'type' => 'single_choice',
+            'prompt' => 'Herr Kruse — Welches Argument führt er an?',
+            'correct_answer' => 'c',
+            'data' => ['model' => 'c — Die Note gibt einen schnellen Überblick über die Leistungsentwicklung'],
             'explanation' => 'La note donne un aperçu rapide et clair de la progression — un retour plus motivant.',
+            'options' => [
+                ['label' => 'a', 'text' => 'Noten wirken oft demotivierend auf Schülerinnen und Schüler.'],
+                ['label' => 'b', 'text' => 'Gleiche Leistungen erhalten oft unterschiedliche Noten.'],
+                ['label' => 'c', 'text' => 'Die Note zeigt auf einen Blick, ob sich die Leistung verbessert oder verschlechtert hat — einfach zu verstehen und motivierend.'],
+                ['label' => 'd', 'text' => 'Ohne Noten verbessern sich die Schüler schneller in ihren Schwachbereichen.'],
+            ],
         ],
     ],
 
@@ -208,37 +269,64 @@ return [
     ],
 
     // ------------------------------------------------------------------
-    // Démo 5 — Kurzantwort: Gliederungspunkte zu Vortrag ergänzen
-    // (Video « Gesichtserkennung », Neurowissenschaften : 4 Stichtextfelder)
+    // Démo 5 — QCM (adapté de « Kurzantwort: Gliederungspunkte zu Vortrag
+    // ergänzen ») (Vortrag « Gesichtserkennung / Gesichtszellen »)
+    // Solutions officielles : Merkmal — besonders aktiv bei Gesichtern ;
+    // früher — eine Zelle erkennt ein ganzes Gesicht ; neu — nur ein Teil/
+    // ein Aspekt ; Algorithmus — berechnen, wie das Gesicht aussah.
     // ------------------------------------------------------------------
     5 => [
         [
-            'type' => 'short_answer',
-            'prompt' => 'Merkmal von Gesichtszellen:',
-            'correct_answer' => ['gesichtern', 'gesichter', 'aktiv'],
-            'data' => ['model' => '(sind) besonders aktiv bei der Betrachtung von Gesichtern'],
+            'type' => 'single_choice',
+            'prompt' => 'Merkmal von Gesichtszellen: …',
+            'correct_answer' => 'a',
+            'data' => ['model' => 'a — (sie) sind besonders aktiv bei der Betrachtung von Gesichtern'],
             'explanation' => "Les « Gesichtszellen » (lobe temporal) sont très actives lors de l'observation de visages, et pas pour d'autres objets.",
+            'options' => [
+                ['label' => 'a', 'text' => 'sie sind besonders aktiv bei der Betrachtung von Gesichtern.'],
+                ['label' => 'b', 'text' => 'sie reagieren am stärksten auf Alltagsgegenstände wie Tassen und Schuhe.'],
+                ['label' => 'c', 'text' => 'sie befinden sich im Frontallappen des Gehirns.'],
+                ['label' => 'd', 'text' => 'sie sind bisher nur bei Affen nachgewiesen worden.'],
+            ],
         ],
         [
-            'type' => 'short_answer',
-            'prompt' => 'Frühere, widerlegte Annahme:',
-            'correct_answer' => ['ganzes', 'ganze', 'komplette'],
-            'data' => ['model' => 'Jeweils eine bestimmte Nervenzelle / eine einzelne Zelle erkennt ein ganzes Gesicht'],
+            'type' => 'single_choice',
+            'prompt' => 'Frühere, widerlegte Annahme: …',
+            'correct_answer' => 'b',
+            'data' => ['model' => 'b — (man ging davon aus, dass) jede Gesichtszelle ein ganzes Gesicht erkennt'],
             'explanation' => "On pensait jusqu'à récemment qu'une seule cellule faciale codait le visage entier.",
+            'options' => [
+                ['label' => 'a', 'text' => 'jede Gesichtszelle erkennt nur einen Teil des Gesichts.'],
+                ['label' => 'b', 'text' => 'jede Gesichtszelle erkennt ein ganzes Gesicht.'],
+                ['label' => 'c', 'text' => 'Gesichtszellen erkennen Gesichter nur im Halbdunkel.'],
+                ['label' => 'd', 'text' => 'das Erkennen von Gesichtern ist allein den Menschen vorbehalten.'],
+            ],
         ],
         [
-            'type' => 'short_answer',
-            'prompt' => 'Neue Erkenntnis aus den Forschungsergebnissen:',
-            'correct_answer' => ['aspekt', 'teil', 'information'],
-            'data' => ['model' => 'Jede Gesichtszelle erkennt nur einen Teil / einen bestimmten Aspekt (eine räumliche Information) des Gesichts'],
+            'type' => 'single_choice',
+            'prompt' => 'Neue Erkenntnis aus den Forschungsergebnissen: …',
+            'correct_answer' => 'a',
+            'data' => ['model' => 'a — jede Gesichtszelle erkennt nur einen Teil / einen bestimmten Aspekt des Gesichts'],
             'explanation' => "Chaque cellule ne capture qu'un aspect / une partie (une information spatiale) du visage.",
+            'options' => [
+                ['label' => 'a', 'text' => 'jede Gesichtszelle erkennt nur einen bestimmten Aspekt (eine räumliche Information) des Gesichts.'],
+                ['label' => 'b', 'text' => 'Gesichtszellen erkennen Gesichter erst, wenn viele von ihnen zusammenarbeiten.'],
+                ['label' => 'c', 'text' => 'die Gesichtszellen sitzen im Occipitallappen des Gehirns.'],
+                ['label' => 'd', 'text' => 'das Gehirn speichert Gesichter vor allem im Stirnlappen.'],
+            ],
         ],
         [
-            'type' => 'short_answer',
-            'prompt' => 'Aufgabe des Computer-Algorithmus:',
-            'correct_answer' => ['rekonstru', 'berechn'],
-            'data' => ['model' => 'Das Gesicht berechnen / rekonstruieren, das ein Affe gesehen hatte'],
+            'type' => 'single_choice',
+            'prompt' => 'Aufgabe des Computer-Algorithmus in der Studie: …',
+            'correct_answer' => 'b',
+            'data' => ['model' => 'b — berechnen bzw. rekonstruieren, wie das Gesicht aussah, das der Affe gesehen hatte'],
             'explanation' => "L'algorithme recalcule, à partir de l'activité neuronale mesurée, le visage que le singe avait regardé.",
+            'options' => [
+                ['label' => 'a', 'text' => 'die Aktivität der Gesichtszellen im Ohr des Affen zu messen.'],
+                ['label' => 'b', 'text' => 'berechnen bzw. rekonstruieren, wie das Gesicht aussah, das der Affe gesehen hatte.'],
+                ['label' => 'c', 'text' => 'die Anzahl der Gesichtszellen im Temporallappen zu zählen.'],
+                ['label' => 'd', 'text' => 'festzustellen, welche Gesichter der Affe im Traum sah.'],
+            ],
         ],
     ],
 

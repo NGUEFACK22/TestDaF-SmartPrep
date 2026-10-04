@@ -103,7 +103,19 @@
                                 @if ($option->is_correct) <span class="text-green-700 font-medium">✓</span> @endif
                             </div>
                         @endforeach
-                        @if ($question->answerOptions->isEmpty() && is_array($question->correct_answer))
+                        @if (! empty($question->data['segments']) && is_array($question->correct_answer))
+                            <div class="text-sm leading-relaxed bg-slate-50 border border-slate-200 rounded-lg p-3">
+                                @foreach ($question->data['segments'] as $seg)
+                                    @if (isset($seg['t']))
+                                        {{ $seg['t'] }}
+                                    @else
+                                        @php $isCorrectWord = in_array(mb_strtolower($seg['id']), $question->correct_answer, true); @endphp
+                                        <span class="rounded border px-1.5 py-0.5 mx-0.5 {{ $isCorrectWord ? 'border-green-400 bg-green-50 text-green-800 font-medium' : 'border-slate-300' }}">{{ $seg['w'] }}@if($isCorrectWord) ✓@endif</span>
+                                    @endif
+                                @endforeach
+                            </div>
+                            <div class="text-xs text-slate-500 mt-1">Mots à marquer : {{ implode(' · ', $question->correct_answer) }}</div>
+                        @elseif ($question->answerOptions->isEmpty() && is_array($question->correct_answer))
                             <div class="text-sm text-green-700">Bonne réponse : <strong>{{ implode(', ', $question->correct_answer) }}</strong></div>
                         @endif
                     </div>

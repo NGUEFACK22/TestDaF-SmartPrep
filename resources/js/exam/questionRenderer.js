@@ -35,6 +35,9 @@ function buildSpec(q, existing, body) {
         case 'true_false':
             return singleChoice(body, options, existing);
         case 'multiple_choice':
+            if (Array.isArray(data.segments) && data.segments.length > 0) {
+                return wordClick(body, data.segments, existing);
+            }
             return multiChoice(body, options, existing);
         case 'fill_blank':
             return fillBlank(body, data.gaps || existing, existing);
@@ -89,6 +92,45 @@ function multiChoice(body, options, existing) {
     });
 
     return { read: () => Array.from(body.querySelectorAll('input:checked')).map((i) => i.value) };
+}
+
+/**
+ * Format TestDaF digital « Laut- und Schriftbild abgleichen » : le candidat
+ * clique les mots du texte qui diffèrent de l'audio (un 2e clic dé-mark).
+ * `read()` renvoie l'ensemble des ids de mots sélectionnés.
+ */
+function wordClick(body, segments, existing) {
+    const selected = new Set(Array.isArray(existing) ? existing.map(String) : []);
+    const wrap = document.createElement('div');
+    wrap.className = 'word-click text-sm leading-relaxed bg-slate-50 border border-slate-200 rounded-lg p-4';
+
+    const apply = (chip, on) => {
+        chip.className = 'word-chip mx-0.5 rounded border px-1.5 py-0.5 text-sm transition-colors '
+            + (on ? 'border-blue-500 bg-blue-100 text-blue-800' : 'border-slate-300 bg-white hover:bg-slate-100');
+    };
+
+    segments.forEach((seg) => {
+        if (typeof seg.t === 'string') {
+            wrap.appendChild(document.createTextNode(seg.t));
+            return;
+        }
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.dataset.wordId = String(seg.id);
+        chip.textContent = seg.w;
+        apply(chip, selected.has(String(seg.id)));
+        chip.addEventListener('click', () => {
+            const id = String(seg.id);
+            const on = !selected.has(id);
+            if (on) { selected.add(id); } else { selected.delete(id); }
+            apply(chip, on);
+        });
+        wrap.appendChild(chip);
+    });
+
+    body.appendChild(wrap);
+
+    return { read: () => Array.from(selected) };
 }
 
 function fillBlank(body, gaps, existing) {

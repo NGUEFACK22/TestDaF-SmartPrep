@@ -173,6 +173,21 @@ class HoerenDemoTrainingTest extends TestCase
         $this->assertGreaterThan(0, $totalQuestions, 'Les démos doivent porter des questions officielles.');
     }
 
+    public function test_demo_seven_renders_clickable_words_with_correct_highlighting(): void
+    {
+        $this->seed(HoerenDemoSeeder::class);
+
+        $demo = $this->demoExercises()->first(
+            fn (Exercise $exercise): bool => (int) ($exercise->content['demo_number'] ?? 0) === 7
+        );
+
+        $this->actingAs($this->candidate)
+            ->get(route('training.show', $demo))
+            ->assertOk()
+            ->assertSee('Mots à marquer', false)
+            ->assertSee('Garantie', false);
+    }
+
     private function demoExercises(): Collection
     {
         return Exercise::query()
