@@ -12,7 +12,7 @@ class Question extends Model
     use HasFactory;
 
     protected $fillable = [
-        'exercise_id', 'type', 'position', 'prompt',
+        'exercise_id', 'type', 'difficulty', 'position', 'prompt',
         'points', 'data', 'correct_answer', 'explanation',
     ];
 

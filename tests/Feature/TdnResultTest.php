@@ -43,7 +43,7 @@ class TdnResultTest extends TestCase
         $first = $attempt->attemptExercises()->orderBy('position')->first();
         $ae = $engine->startExercise($attempt, $first->exercise_id);
 
-        foreach ($ae->exercise->questions as $question) {
+        foreach ($ae->formQuestions() as $question) {
             app(AnswerService::class)->save($attempt, $ae, $question, $question->correct_answer);
         }
 

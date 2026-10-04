@@ -25,6 +25,8 @@ class ModellTestSeeder extends Seeder
             require __DIR__.'/data/themes_a.php',
             require __DIR__.'/data/themes_b.php',
         );
+        // Pools de questions supplémentaires (formes dynamiques) par numéro.
+        $pools = require __DIR__.'/data/question_pools.php';
 
         foreach ($themes as $index => $data) {
             $number = $index + 1;
@@ -32,11 +34,11 @@ class ModellTestSeeder extends Seeder
                 continue;
             }
 
-            DB::transaction(fn () => $this->createTest($number, $data));
+            DB::transaction(fn () => $this->createTest($number, $data, $pools[$number] ?? []));
         }
     }
 
-    private function createTest(int $number, array $data): void
+    private function createTest(int $number, array $data, array $pool = []): void
     {
         $test = ModellTest::create([
             'number' => $number,
@@ -57,8 +59,8 @@ class ModellTestSeeder extends Seeder
             ]);
         }
 
-        $this->seedLesen($test, $data);
-        $this->seedHoeren($test, $data);
+        $this->seedLesen($test, $data, $pool);
+        $this->seedHoeren($test, $data, $pool);
         $this->seedSchreiben($test, $data);
         $this->seedSprechen($test, $data);
 
@@ -70,7 +72,7 @@ class ModellTestSeeder extends Seeder
         return $test->sections()->where('skill', $skill->value)->firstOrFail();
     }
 
-    private function seedLesen(ModellTest $test, array $data): void
+    private function seedLesen(ModellTest $test, array $data, array $pool = []): void
     {
         $section = $this->section($test, Skill::Lesen);
         $position = 0;
@@ -85,12 +87,23 @@ class ModellTestSeeder extends Seeder
             'duration_seconds' => 600,
             'points' => 2,
             'position' => $position,
-            'content' => ['text' => $data['lesen']['text']],
+            'content' => [
+                'text' => $data['lesen']['text'],
+                // Forme dynamique : 2 questions tirées du pool à chaque tentative.
+                'questions_per_form' => 2,
+            ],
             'status' => 'published',
         ]);
         $section->exercises()->attach($exercise->id, ['position' => $position++]);
 
-        foreach (array_values($data['lesen']['questions']) as $qIndex => $q) {
+        // Pool = questions du thème + questions du pool dynamique
+        // (étiquetées B2/C1/C1+) → 2 questions tirées par tentative.
+        $questions = array_merge(
+            array_values($data['lesen']['questions']),
+            array_values($pool['lesen_new'] ?? []),
+        );
+
+        foreach ($questions as $qIndex => $q) {
             $this->singleChoice($exercise, $qIndex, $q);
         }
 
@@ -104,20 +117,27 @@ class ModellTestSeeder extends Seeder
             'duration_seconds' => 300,
             'points' => 2,
             'position' => $position,
-            'content' => ['text' => $data['lesen']['text']],
+            'content' => [
+                'text' => $data['lesen']['text'],
+                // Forme dynamique : 1 variante tirée du pool à chaque tentative.
+                'questions_per_form' => 1,
+            ],
             'status' => 'published',
         ]);
         $section->exercises()->attach($exercise2->id, ['position' => $position]);
 
-        Question::create([
-            'exercise_id' => $exercise2->id,
-            'type' => 'fill_blank',
-            'position' => 0,
-            'prompt' => 'Welche Wörter fehlen? (Zwei passende Wörter aus dem Text.)',
-            'points' => 2,
-            'correct_answer' => ['Universität', 'Wohnheim'],
-            'explanation' => 'Beide Begriffe passen in den Zusammenhang.',
-        ]);
+        foreach (array_values($pool['luecken'] ?? []) as $pos => $pair) {
+            Question::create([
+                'exercise_id' => $exercise2->id,
+                'type' => 'fill_blank',
+                'position' => $pos,
+                'prompt' => 'Welche Wörter fehlen? (Zwei passende Wörter aus dem Text.)',
+                'points' => 2,
+                'difficulty' => 'C1',
+                'correct_answer' => $pair,
+                'explanation' => 'Beide Begriffe passen in den Zusammenhang.',
+            ]);
+        }
     }
 
     private function singleChoice(Exercise $exercise, int $position, array $q): void
@@ -125,6 +145,7 @@ class ModellTestSeeder extends Seeder
         $question = Question::create([
             'exercise_id' => $exercise->id,
             'type' => 'single_choice',
+            'difficulty' => $q['difficulty'] ?? 'C1',
             'position' => $position,
             'prompt' => $q['prompt'],
             'points' => 1,
@@ -143,7 +164,7 @@ class ModellTestSeeder extends Seeder
         }
     }
 
-    private function seedHoeren(ModellTest $test, array $data): void
+    private function seedHoeren(ModellTest $test, array $data, array $pool = []): void
     {
         $section = $this->section($test, Skill::Hoeren);
 
@@ -157,12 +178,23 @@ class ModellTestSeeder extends Seeder
             'duration_seconds' => 300,
             'points' => 1,
             'position' => 0,
-            'content' => ['transcript' => $data['hoeren']['transcript']],
+            'content' => [
+                'transcript' => $data['hoeren']['transcript'],
+                // Forme dynamique : 1 question tirée du pool à chaque tentative.
+                'questions_per_form' => 1,
+            ],
             'status' => 'published',
         ]);
         $section->exercises()->attach($exercise->id, ['position' => 0]);
 
-        foreach (array_values($data['hoeren']['questions']) as $qIndex => $q) {
+        // Pool = questions du thème + questions du pool dynamique
+        // (étiquetées B2/C1/C1+) → 1 question tirée par tentative.
+        $questions = array_merge(
+            array_values($data['hoeren']['questions']),
+            array_values($pool['hoeren_new'] ?? []),
+        );
+
+        foreach ($questions as $qIndex => $q) {
             $this->singleChoice($exercise, $qIndex, $q);
         }
     }

@@ -82,7 +82,7 @@ class AntiCheatTest extends TestCase
 
         $ae->update(['expires_at' => now()->subMinute()]);
 
-        $question = $ae->exercise->questions()->first();
+        $question = $ae->formQuestions()->first();
 
         $response = $this->actingAs($this->user)->postJson(route('api.answers.store', $attempt), [
             'question_id' => $question->id,

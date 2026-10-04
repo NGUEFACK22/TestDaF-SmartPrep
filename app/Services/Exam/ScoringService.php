@@ -17,12 +17,14 @@ class ScoringService
     /** Corrige toutes les questions objectives d'une tâche terminée. */
     public function scoreObjective(Attempt $attempt, AttemptExercise $attemptExercise): void
     {
-        $attemptExercise->loadMissing('exercise.questions');
+        // Seules les questions de la forme de cette tentative sont corrigées
+        // (question_form = null ⇒ toutes les questions, comportement legacy).
+        $questions = $attemptExercise->formQuestions();
 
         $earned = 0.0;
         $max = 0.0;
 
-        foreach ($attemptExercise->exercise->questions as $question) {
+        foreach ($questions as $question) {
             if (! $question->isObjective()) {
                 continue;
             }

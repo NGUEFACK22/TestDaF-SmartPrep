@@ -15,7 +15,7 @@ class AttemptExercise extends Model
     protected $fillable = [
         'attempt_id', 'exercise_id', 'section_id', 'position', 'status',
         'started_at', 'expires_at', 'completed_at', 'time_spent',
-        'answers_locked', 'score', 'max_score',
+        'answers_locked', 'score', 'max_score', 'question_form',
     ];
 
     protected function casts(): array
@@ -26,6 +26,7 @@ class AttemptExercise extends Model
             'expires_at' => 'datetime',
             'completed_at' => 'datetime',
             'answers_locked' => 'boolean',
+            'question_form' => 'array',
         ];
     }
 
@@ -78,5 +79,35 @@ class AttemptExercise extends Model
         return $this->state()->acceptsAnswers()
             && ! $this->answers_locked
             && ! $this->hasExpired();
+    }
+
+    /**
+     * IDs des questions actives pour cette tentative.
+     * null = pas de forme : toutes les questions de l'exercice (légacy).
+     */
+    public function formIds(): ?array
+    {
+        $form = $this->question_form;
+
+        if (empty($form)) {
+            return null;
+        }
+
+        return array_values(array_map('intval', (array) $form));
+    }
+
+    /** Questions actives pour cette tentative, dans l'ordre du pool. */
+    public function formQuestions(): \Illuminate\Support\Collection
+    {
+        $ids = $this->formIds();
+        $pool = $this->exercise->questions()->orderBy('position')->get();
+
+        if ($ids === null) {
+            return $pool;
+        }
+
+        return $pool
+            ->filter(fn ($q) => in_array((int) $q->getKey(), $ids, true))
+            ->values();
     }
 }

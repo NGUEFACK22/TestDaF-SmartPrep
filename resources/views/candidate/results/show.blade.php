@@ -64,12 +64,12 @@
     <div class="bg-white border border-slate-200 rounded-2xl p-5 mt-6">
         <h2 class="font-semibold mb-3">Correction détaillée (Lesen / Hören)</h2>
         @forelse ($attempt->attemptExercises as $ae)
-            @if (! $ae->exercise->skill->isProductive() && $ae->exercise->questions->isNotEmpty())
+            @if (! $ae->exercise->skill->isProductive() && $ae->formQuestions()->isNotEmpty())
                 <div class="mb-5">
                     <div class="font-medium">{{ $ae->exercise->title }}
                         <span class="text-xs text-slate-400">— {{ Format::number($ae->score, 1) }}/{{ Format::number($ae->max_score, 1) }}</span>
                     </div>
-                    @foreach ($ae->exercise->questions as $question)
+                    @foreach ($ae->formQuestions() as $question)
                         @php $answer = $attempt->answers->firstWhere('question_id', $question->id); @endphp
                         <div class="mt-2 text-sm border-l-2 pl-3 {{ $answer?->is_correct ? 'border-green-400' : 'border-red-300' }}">
                             <div class="text-slate-700">{{ $question->prompt }}</div>

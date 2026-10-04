@@ -101,7 +101,7 @@ class ExamEngineTest extends TestCase
             'expires_at' => now()->subMinutes(20),
         ]);
 
-        $question = $ae->exercise->questions()->first();
+        $question = $ae->formQuestions()->first();
 
         $this->expectException(ExamException::class);
 
@@ -121,7 +121,7 @@ class ExamEngineTest extends TestCase
         $first->refresh();
         $this->assertTrue($first->state()->isFinal());
 
-        $question = $first->exercise->questions()->first();
+        $question = $first->formQuestions()->first();
 
         $this->expectException(ExamException::class);
 
@@ -167,7 +167,7 @@ class ExamEngineTest extends TestCase
         $first = $attempt->attemptExercises()->orderBy('position')->first();
         $ae = $engine->startExercise($attempt, $first->exercise_id);
 
-        foreach ($ae->exercise->questions as $question) {
+        foreach ($ae->formQuestions() as $question) {
             $answers->save($attempt, $ae, $question, $question->correct_answer);
         }
 

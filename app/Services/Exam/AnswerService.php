@@ -40,6 +40,13 @@ class AnswerService
             throw new ExamException('La question n\'appartient pas à cet exercice.', 422);
         }
 
+        // 2b) La question doit faire partie de la forme de CETTE tentative
+        //     (pas de réponse sur des questions du pool non tirées).
+        $formIds = $attemptExercise->formIds();
+        if ($formIds !== null && ! in_array((int) $question->id, $formIds, true)) {
+            throw new ExamException('Cette question ne fait pas partie de la tâche en cours.', 422);
+        }
+
         if ($attemptExercise->state()->isFinal()) {
             throw ExamException::locked('Cet exercice est terminé : les réponses ne peuvent plus être modifiées.');
         }

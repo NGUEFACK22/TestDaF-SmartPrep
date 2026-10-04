@@ -29,6 +29,7 @@ class ExamService
     public function __construct(
         private TimerService $timer,
         private ScoringService $scoring,
+        private FormService $forms,
     ) {}
 
     /** Démarre (ou reprend) une tentative sur un Modelltest. */
@@ -69,6 +70,10 @@ class ExamService
                     ]);
                 }
             }
+
+            // Forme de questions dynamique : contenu neuf à chaque
+            // tentative, format constant, difficulté calibrée C1/C1+.
+            $this->forms->buildForAttempt($attempt);
 
             $this->activateNext($attempt);
             $this->log($attempt, 'attempt_started', ['mode' => $mode]);

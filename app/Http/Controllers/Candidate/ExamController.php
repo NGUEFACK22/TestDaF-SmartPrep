@@ -101,7 +101,11 @@ class ExamController extends Controller
 
     private function renderExercise(Attempt $attempt, AttemptExercise $attemptExercise)
     {
-        $attemptExercise->load('exercise.questions.answerOptions', 'exercise.media', 'section');
+        $attemptExercise->load('section');
+
+        $questions = $attemptExercise->formQuestions();
+        $questions->load('answerOptions');
+        $attemptExercise->exercise->loadMissing('media');
 
         $answers = $attempt->answers()
             ->where('attempt_exercise_id', $attemptExercise->id)
@@ -139,7 +143,7 @@ class ExamController extends Controller
             'attempt' => $attempt,
             'attemptExercise' => $attemptExercise,
             'exercise' => $attemptExercise->exercise,
-            'questions' => $attemptExercise->exercise->questions,
+            'questions' => $questions,
             'answers' => $answers,
             'timer' => $this->timer->display($attemptExercise),
             'progress' => $progress,
