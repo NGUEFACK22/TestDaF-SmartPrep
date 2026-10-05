@@ -98,8 +98,14 @@ class ExamService
             }
         }
 
+        // Auto-réparation : si la tâche courante n'est pas en cours
+        // (pointeur obsolète sur une tâche clôturée, tâche verrouillée dont
+        // l'activation a manqué, ou toutes clôturées), on active la suivante.
+        // activateNext finalise la tentative si plus aucune tâche ne reste.
         $current = $attempt->fresh('attemptExercises.exercise')->currentExercise();
-        if ($current && $current->state()->isFinal()) {
+        $inProgressState = $current && ! $current->state()->isFinal() && $current->state() !== ExerciseState::Locked;
+
+        if (! $inProgressState) {
             $this->activateNext($attempt->refresh());
         }
 

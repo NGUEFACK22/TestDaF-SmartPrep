@@ -174,4 +174,82 @@ class ExamSyncTest extends TestCase
             ->assertSee('/ 20')
             ->assertSee('moyenne des parties corrigées');
     }
+
+    /**
+     * Bug utilisateur : après avoir terminé une partie (WEITER), le client
+     * était envoyé vers la page résultats au lieu de la partie suivante.
+     * Cause : l'endpoint complete renvoyait `redirect: null` quand une
+     * tâche suivante existait, et le JS replombait sur le fallback
+     * "results.show".
+     */
+    public function test_completing_a_part_redirects_to_the_next_part_not_the_results(): void
+    {
+        $engine = app(ExamService::class);
+        $attempt = $engine->startAttempt($this->user, $this->c1Test());
+
+        $first = $attempt->attemptExercises()->orderBy('position')->first();
+        $engine->startExercise($attempt->fresh(), $first->exercise_id);
+        $first = $first->fresh();
+
+        $response = $this->actingAs($this->user)
+            ->postJson(route('exam.complete', [$attempt, $first]));
+
+        $response->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('finished', false);
+
+        // `redirect` doit TOUJOURS être défini et pointer vers la page
+        // d'examen (la partie suivante), jamais vers les résultats tant
+        // qu'une tâche reste à faire.
+        $this->assertSame(route('exam.show', $attempt), $response->json('redirect'));
+        $this->assertNotSame(route('results.show', $attempt), $response->json('redirect'));
+        $this->assertNotNull($response->json('next.exercise_id'));
+
+        // La tâche suivante est bien activée (la page d'examen l'affiche).
+        $next = $attempt->fresh()->currentExercise();
+        $this->assertNotNull($next);
+        $this->assertNotSame($first->exercise_id, $next->exercise_id);
+        $this->assertSame(\App\Enums\ExerciseState::Available, $next->status);
+
+        // La page d'examen rend la partie suivante (pas la page résultats).
+        $this->actingAs($this->user)
+            ->get(route('exam.show', $attempt))
+            ->assertOk()
+            ->assertSee('Aufgabe');
+    }
+
+    /**
+     * Cas de la tentative #6 : une tâche expire (temps serveur) mais la
+     * suivante n'a pas été activée et le pointeur courant pointe encore sur
+     * la tâche clôturée. Au rechargement, restore() doit réparer l'état.
+     */
+    public function test_stale_pointer_after_task_expiry_is_repaired_on_restore(): void
+    {
+        $engine = app(ExamService::class);
+        $attempt = $engine->startAttempt($this->user, $this->c1Test());
+
+        $tasks = $attempt->attemptExercises()->orderBy('position')->get();
+        $this->assertGreaterThanOrEqual(3, $tasks->count());
+        $first = $tasks->first();
+
+        $engine->startExercise($attempt->fresh(), $first->exercise_id);
+        $this->assertSame($first->exercise_id, $attempt->fresh()->current_exercise_id);
+
+        // Simule l'expiration serveur SANS activation de la suivante
+        // (TimerService::sync clôturait la tâche, pointeur non remis à jour).
+        $first->fresh()->update([
+            'status' => \App\Enums\ExerciseState::Expired->value,
+            'completed_at' => now(),
+        ]);
+
+        $engine->restore($attempt->fresh());
+
+        // currentExercise() ne renvoie plus la tâche expirée : c'est la
+        // suivante, activée par restore().
+        $current = $attempt->fresh()->currentExercise();
+        $this->assertNotNull($current);
+        $this->assertNotSame($first->exercise_id, $current->exercise_id);
+        $this->assertSame(\App\Enums\ExerciseState::Available, $current->status);
+        $this->assertSame($current->exercise_id, $attempt->fresh()->current_exercise_id);
+    }
 }

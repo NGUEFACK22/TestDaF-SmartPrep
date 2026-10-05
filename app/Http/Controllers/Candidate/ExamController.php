@@ -64,15 +64,20 @@ class ExamController extends Controller
         $next = $this->exam->completeExercise($attempt, $attemptExercise->exercise_id, $expired);
 
         if ($request->wantsJson()) {
+            // `redirect` est TOUJOURS défini : c'est la destination à suivre.
+            // Tant qu'une partie suivante existe, on retourne vers la page
+            // d'examen (jamais vers les résultats avant la vraie fin).
+            $target = $next ? route('exam.show', $attempt) : route('results.show', $attempt);
+
             return response()->json([
                 'ok' => true,
                 'completed' => true,
                 'next' => $next ? [
                     'exercise_id' => $next->exercise_id,
-                    'redirect' => route('exam.show', $attempt),
+                    'redirect' => $target,
                 ] : null,
                 'finished' => $next === null,
-                'redirect' => $next === null ? route('results.show', $attempt) : null,
+                'redirect' => $target,
             ]);
         }
 

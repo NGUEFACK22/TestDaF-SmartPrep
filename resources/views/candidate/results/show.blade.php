@@ -5,6 +5,17 @@
 @section('content')
     @php use App\Support\Format; @endphp
 
+    @if ($attempt->isInProgress())
+        <div class="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+            <strong>Tentative en cours.</strong> Ce test n'est pas terminé — les scores
+            affichés sont partiels et indicatifs.
+            <a href="{{ route('exam.show', $attempt) }}"
+               class="ml-3 inline-block rounded-lg bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700 align-middle">
+                Reprendre le test
+            </a>
+        </div>
+    @endif
+
     <div class="flex items-center justify-between flex-wrap gap-3">
         <div>
             <h1 class="text-2xl font-bold">{{ $attempt->modellTest?->title }}</h1>
@@ -14,10 +25,16 @@
                     <span class="ml-2 text-xs text-slate-500">moyenne des parties corrigées (échelle 0–20 du TestDaF)</span>
                 </p>
             @endif
-            <p class="text-sm text-slate-500 mt-1">
-                Terminé le {{ $attempt->completed_at?->format('d/m/Y H:i') }} —
-                Score global : {{ Format::number($attempt->score, 1) }} / {{ Format::number($attempt->max_score, 1) }}
-            </p>
+            @if ($attempt->isInProgress())
+                <p class="text-sm text-slate-500 mt-1">
+                    Test en cours — Score partiel : {{ Format::number($attempt->score, 1) }} / {{ Format::number($attempt->max_score, 1) }}
+                </p>
+            @else
+                <p class="text-sm text-slate-500 mt-1">
+                    Terminé le {{ $attempt->completed_at?->format('d/m/Y H:i') }} —
+                    Score global : {{ Format::number($attempt->score, 1) }} / {{ Format::number($attempt->max_score, 1) }}
+                </p>
+            @endif
         </div>
         <a href="{{ route('results.report', $attempt) }}" class="rounded-lg bg-slate-900 text-white px-4 py-2 text-sm font-medium hover:bg-slate-700">
             Rapport complet

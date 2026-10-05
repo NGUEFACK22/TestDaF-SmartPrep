@@ -151,7 +151,9 @@ function init(cfg) {
     async function complete(reason) {
         try {
             const result = await postJson(cfg.endpoints.complete, { reason });
-            window.location = result.redirect || cfg.endpoints.redirect;
+            // Le serveur indique TOUJOURS où aller : partie suivante (page
+            // d'examen) ou résultats (dernière partie vraiment terminée).
+            window.location = result?.redirect || result?.next?.redirect || cfg.endpoints.redirect;
         } catch (e) {
             window.location = cfg.endpoints.redirect;
         }

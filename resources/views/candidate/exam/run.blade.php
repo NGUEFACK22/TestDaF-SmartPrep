@@ -42,7 +42,10 @@
             'timer' => route('exam.timer', $attempt),
             'complete' => route('exam.complete', [$attempt, $attemptExercise]),
             'next' => route('exam.next', [$attempt, $attemptExercise]),
-            'redirect' => route('results.show', $attempt),
+            // Fallback de sécurité : la page d'examen (le serveur décide ;
+            // elle redirige elle-même vers les résultats si la tentative est
+            // vraiment terminée, jamais l'inverse).
+            'redirect' => route('exam.show', $attempt),
         ],
     ];
 @endphp

@@ -76,8 +76,10 @@ class Attempt extends Model
     /**
      * Tâche courante selon le serveur (source de vérité).
      *
-     * Priorité à current_exercise_id, puis à la première tâche non finalisée
-     * *de cette tentative uniquement* (jamais d'une autre tentative).
+     * Priorité à current_exercise_id, mais seulement si cette tâche n'est
+     * PAS encore terminée (un pointeur obsolète ne doit pas masquer la
+     * tâche suivante activée). Puis la première tâche non finalisée de
+     * *cette tentative uniquement* (jamais d'une autre tentative).
      */
     public function currentExercise(): ?AttemptExercise
     {
@@ -85,7 +87,8 @@ class Attempt extends Model
             $ae = $this->attemptExercises()
                 ->where('exercise_id', $this->current_exercise_id)
                 ->first();
-            if ($ae) {
+
+            if ($ae && ! $ae->state()->isFinal()) {
                 return $ae;
             }
         }
