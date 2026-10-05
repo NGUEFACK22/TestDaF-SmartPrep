@@ -180,10 +180,11 @@ class ExamService
      *
      * Utilisé par le bouton SUIVANT et l'expiration du timer de question.
      * Le serveur vérifie que la question courante est répondu/expirée.
-     * Retourne 'advanced' (nouvelle question), 'exercise' (tâche suivante)
-     * ou 'finished' (fin du Modelltest).
+     * Retourne 'advanced' (nouvelle question), 'resync' (le serveur était
+     * déjà passé à une question plus avancée que celle affichée),
+     * 'exercise' (tâche suivante) ou 'finished' (fin du Modelltest).
      */
-    public function advanceQuestion(Attempt $attempt, AttemptExercise $attemptExercise): array
+    public function advanceQuestion(Attempt $attempt, AttemptExercise $attemptExercise, ?int $fromIndex = null): array
     {
         abort_unless($attemptExercise->attempt_id === $attempt->id, 404);
 
@@ -217,6 +218,19 @@ class ExamService
         if ($syncAdvanced) {
             return [
                 'outcome' => 'advanced',
+                'question' => $this->questionPayload($attemptExercise),
+                'timer' => $this->timer->display($attemptExercise),
+                'question_timer' => $this->questions->display($attemptExercise),
+            ];
+        }
+
+        // Idempotence : si le client affiche encore une question que le
+        // serveur a déjà dépassée (requête SUIVANT en retard), on n'avance
+        // PLUS — on renvoie l'état courant pour que le client resynchronise
+        // (pas de double saut de question).
+        if ($fromIndex !== null && $attemptExercise->questionIndex() > $fromIndex) {
+            return [
+                'outcome' => 'resync',
                 'question' => $this->questionPayload($attemptExercise),
                 'timer' => $this->timer->display($attemptExercise),
                 'question_timer' => $this->questions->display($attemptExercise),

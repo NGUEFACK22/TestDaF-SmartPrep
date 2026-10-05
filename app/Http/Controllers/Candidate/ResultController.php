@@ -30,10 +30,17 @@ class ResultController extends Controller
             ->filter(fn ($e) => in_array($e->status, ['pending', 'processing'], true))
             ->count();
 
+        // Note finale sur 20 : moyenne des notes 0–20 des parties corrigées
+        // (échelle TestDaF, jamais une note globale officielle).
+        $grade20 = $results->count() > 0
+            ? round($results->avg(fn ($r) => (float) $r->points20), 1)
+            : null;
+
         return view('candidate.results.show', [
             'attempt' => $attempt,
             'results' => $results,
             'aiPending' => $aiPending,
+            'grade20' => $grade20,
             'partSummary' => $this->statistics->partSummary($attempt),
             'weakTypes' => $this->statistics->weakQuestionTypes($request->user(), 5),
         ]);
@@ -45,9 +52,16 @@ class ResultController extends Controller
 
         $attempt->load(['modellTest', 'results', 'attemptExercises.exercise']);
 
+        $results = $attempt->results->keyBy(fn ($r) => $r->skill->value);
+
+        $grade20 = $results->count() > 0
+            ? round($results->avg(fn ($r) => (float) $r->points20), 1)
+            : null;
+
         return view('candidate.results.report', [
             'attempt' => $attempt,
-            'results' => $attempt->results->keyBy(fn ($r) => $r->skill->value),
+            'results' => $results,
+            'grade20' => $grade20,
             'weakTypes' => $this->statistics->weakQuestionTypes($request->user(), 8),
             'evolution' => $this->statistics->evolution($request->user()),
         ]);

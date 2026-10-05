@@ -18,7 +18,13 @@
     @endphp
 
     <h1 class="text-2xl font-bold">Rapport final — {{ $attempt->modellTest?->title }}</h1>
-    <p class="text-sm text-slate-500 mb-6">
+    @if ($grade20 !== null)
+        <p class="mt-1">
+            <span class="text-2xl font-bold text-slate-900">Note : {{ Format::number($grade20, 1) }} / 20</span>
+            <span class="ml-2 text-xs text-slate-500">moyenne des parties corrigées (échelle 0–20 du TestDaF)</span>
+        </p>
+    @endif
+    <p class="text-sm text-slate-500 mb-6 mt-1">
         Score global : {{ Format::number($attempt->score, 1) }} / {{ Format::number($attempt->max_score, 1) }}
         · Durée : {{ $attempt->duration_seconds ? Format::clock($attempt->duration_seconds) : '—' }}
     </p>

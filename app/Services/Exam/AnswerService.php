@@ -52,12 +52,24 @@ class AnswerService
         $this->timer->sync($attemptExercise->refresh());
 
         if (! $attemptExercise->acceptsAnswerFor($question)) {
+            // Tolérance aux doublons de sauvegarde (autosave + bouton) : si la
+            // réponse existe déjà, on la retourne au lieu d'une erreur 423 —
+            // un simple doublon ne doit jamais être interprété par le client
+            // comme un verrouillage (sinon il "avançait" par erreur).
+            $existing = UserAnswer::query()
+                ->where('attempt_id', $attempt->id)
+                ->where('question_id', $question->id)
+                ->first();
+
+            if ($existing) {
+                return $existing;
+            }
+
             throw ExamException::locked(
                 'Cette question est verrouillée : répondez à la question en cours dans le temps imparti.',
                 'question_locked'
             );
         }
-
         if ($attemptExercise->state()->isFinal()) {
             throw ExamException::locked('Cet exercice est terminé : les réponses ne peuvent plus être modifiées.');
         }

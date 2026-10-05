@@ -86,10 +86,17 @@ function init(cfg) {
         }
     }
 
-    const collect = () => blocks.map(({ question, el }) => ({
-        question_id: question.id,
-        answer: el._read(),
-    }));
+    // Une réponse "vide" (null, '', []) n'est JAMAIS envoyée : seules les
+    // réponses réellement saisies sont sauvegardées (plus de UserAnswer à
+    // null verrouillées pour toujours).
+    const isEmptyAnswer = (answer) =>
+        answer === null || answer === undefined ||
+        (typeof answer === 'string' && answer.trim() === '') ||
+        (Array.isArray(answer) && answer.length === 0);
+
+    const collect = () => blocks
+        .map(({ question, el }) => ({ question_id: question.id, answer: el._read() }))
+        .filter(({ answer }) => !isEmptyAnswer(answer));
 
     // ------------------------------------------------ Sauvegarde automatique
     let saving = false;
@@ -111,11 +118,13 @@ function init(cfg) {
 
             const locked = results.find((r) => r && r.locked);
             if (locked) {
-                // Verrou de question (temps de la question écoulé) : on demande
-                // au serveur de faire avancer (pas de sortie de l'examen).
+                // Verrou de question (temps écoulé) : le serveur reste l'autorité.
+                // On ne "avance" plus ici — on resynchronise avec /timer qui
+                // renvoie la question courante réelle. Seul le décompte local à
+                // zéro déclenche l'avancement (pas de double saut sur doublon).
                 if (timed && locked.reason === 'question_locked') {
                     setState('Question clôturée…');
-                    advance();
+                    await resync();
                     return;
                 }
                 setState('Temps écoulé');
@@ -178,34 +187,46 @@ function init(cfg) {
         questionTimer.start();
     }
 
-    if (cfg.endpoints.timer) {
-        setInterval(async () => {
-            try {
-                const response = await fetch(cfg.endpoints.timer, {
-                    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                });
-                const data = await response.json();
+    // ------------------------------------------------ Resynchronisation serveur
+    // Le serveur est l'autorité (temps, question courante). En cas de doute
+    // (doublon verrouillé, requête en retard), on reprend l'état réel via
+    // l'endpoint /timer : cela n'avance JAMAIS par lui-même.
+    let resyncing = false;
 
-                if (data.finished) {
-                    window.location = data.redirect || cfg.endpoints.redirect;
-                    return;
+    async function resync() {
+        if (!cfg.endpoints.timer || resyncing) return;
+        resyncing = true;
+        try {
+            const response = await fetch(cfg.endpoints.timer, {
+                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const data = await response.json();
+
+            if (data.finished) {
+                window.location = data.redirect || cfg.endpoints.redirect;
+                return;
+            }
+            if (data.timer) timer.sync(data.timer);
+            if (timed && questionTimer && data.question_timer) {
+                questionTimer.sync(data.question_timer);
+                questionTimer.start();
+                questionIndex = data.question_timer.index ?? questionIndex;
+                questionTotal = data.question_timer.total ?? questionTotal;
+                const progress = document.getElementById('question-progress');
+                if (progress) progress.textContent = `${questionIndex + 1} / ${questionTotal}`;
+                // Le serveur a fait avancer la question (temps dépassé) :
+                // on affiche la nouvelle question sans recharger la page.
+                if (data.question && currentQuestion && data.question.id !== currentQuestion.id) {
+                    renderCurrentQuestion(data.question);
                 }
-                if (data.timer) timer.sync(data.timer);
-                if (timed && questionTimer && data.question_timer) {
-                    questionTimer.sync(data.question_timer);
-                    questionTimer.start();
-                    questionIndex = data.question_timer.index ?? questionIndex;
-                    questionTotal = data.question_timer.total ?? questionTotal;
-                    const progress = document.getElementById('question-progress');
-                    if (progress) progress.textContent = `${questionIndex + 1} / ${questionTotal}`;
-                    // Le serveur a fait avancer la question (temps dépassé) :
-                    // on affiche la nouvelle question sans recharger la page.
-                    if (data.question && currentQuestion && data.question.id !== currentQuestion.id) {
-                        renderCurrentQuestion(data.question);
-                    }
-                }
-            } catch (e) { /* silencieux : le serveur reste l'autorité */ }
-        }, 15000);
+            }
+        } catch (e) { /* silencieux : le serveur reste l'autorité */ } finally {
+            resyncing = false;
+        }
+    }
+
+    if (cfg.endpoints.timer) {
+        setInterval(() => resync(), 15000);
     }
 
     // --------------------------------------------- Avancer à la question suivante
@@ -219,14 +240,18 @@ function init(cfg) {
         try {
             // Sauvegarde de la réponse en cours avant l'avancement serveur.
             await saveAll(false);
-            const result = await postJson(cfg.endpoints.next, {});
+            // from_index = question affichée par le client : le serveur s'en
+            // sert pour éviter un double avancement (idempotence).
+            const result = await postJson(cfg.endpoints.next, { from_index: questionIndex });
 
             if (!result || result.ok === false || result.redirect) {
                 window.location = result?.redirect || cfg.endpoints.redirect;
                 return;
             }
 
-            if (result.outcome === 'advanced' && result.question) {
+            // 'resync' : le serveur était déjà sur une question plus avancée —
+            // on affiche celle-ci sans avancer davantage.
+            if ((result.outcome === 'advanced' || result.outcome === 'resync') && result.question) {
                 questionIndex = result.question_timer?.index ?? questionIndex + 1;
                 questionTotal = result.question_timer?.total ?? questionTotal;
                 renderCurrentQuestion(result.question);

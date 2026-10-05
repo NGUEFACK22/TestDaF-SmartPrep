@@ -92,7 +92,10 @@ class ExamController extends Controller
 
         abort_unless($attemptExercise->attempt_id === $attempt->id, 404);
 
-        $result = $this->exam->advanceQuestion($attempt, $attemptExercise);
+        $from = $request->input('from_index');
+        $fromIndex = ($from === null || $from === '') ? null : (int) $from;
+
+        $result = $this->exam->advanceQuestion($attempt, $attemptExercise, $fromIndex);
 
         if ($request->wantsJson()) {
             return response()->json(['ok' => true] + $result);
