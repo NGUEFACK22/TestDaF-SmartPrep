@@ -50,12 +50,17 @@ Route::middleware('auth')->group(function () {
         ->name('modelltests.start');
 
     // Espaces de préparation
+    Route::get('/preparation', [PreparationController::class, 'index'])->name('preparation.index');
+    Route::post('/preparation/{level}/start', [PreparationController::class, 'startLevel'])
+        ->whereIn('level', ['B1', 'B2', 'C1', 'b1', 'b2', 'c1'])->name('preparation.start');
     Route::get('/preparation/{skill}', [PreparationController::class, 'show'])->name('preparation.show');
 
     // Moteur d'examen
     Route::get('/exam/{attempt}', [ExamController::class, 'show'])->name('exam.show');
     Route::post('/exam/{attempt}/exercises/{attemptExercise}/complete', [ExamController::class, 'complete'])
         ->name('exam.complete');
+    Route::post('/exam/{attempt}/exercises/{attemptExercise}/next', [ExamController::class, 'next'])
+        ->name('exam.next');
     Route::get('/exam/{attempt}/timer', [ExamController::class, 'timer'])->name('exam.timer');
 
     // Résultats

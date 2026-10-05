@@ -28,7 +28,13 @@
 
     <div class="grid md:grid-cols-2 gap-4 mt-6">
         @foreach (\App\Enums\Skill::sequence() as $skill)
-            @php $result = $results->get($skill->value); @endphp
+            @php
+                $result = $results->get($skill->value);
+                $hasPart = $attempt->attemptExercises->contains(
+                    fn ($ae) => $ae->exercise->skill->value === $skill->value
+                );
+            @endphp
+            @if ($hasPart || $result)
             <div class="bg-white border border-slate-200 rounded-2xl p-5">
                 <div class="flex items-center justify-between">
                     <h2 class="font-semibold">{{ $skill->label() }}</h2>
@@ -53,6 +59,7 @@
                     </div>
                 @endif
             </div>
+            @endif
         @endforeach
     </div>
 
@@ -60,6 +67,56 @@
         Échelle 0–20 du TestDaF appliquée séparément à chaque partie (0–4 sous TDN 3 · 5–9 TDN 3 · 10–15 TDN 4 · 16–20 TDN 5).
         Objectif C1 : 16–20 points sur chaque compétence. Estimation pédagogique — jamais une note officielle TestDaF.
     </p>
+
+    <div class="bg-white border border-slate-200 rounded-2xl p-5 mt-6">
+        <h2 class="font-semibold mb-3">Score par partie</h2>
+        @forelse ($partSummary as $part)
+            <div class="flex items-center gap-4 py-2.5 border-b border-slate-100 last:border-0">
+                <div class="w-1/3 min-w-0">
+                    <div class="text-sm font-medium truncate">{{ $part['title'] }}</div>
+                    <div class="text-xs text-slate-400">{{ $part['skill_label'] }}</div>
+                </div>
+                <div class="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                    <div class="h-full rounded-full {{ ($part['percentage'] ?? 0) >= 70 ? 'bg-emerald-500' : (($part['percentage'] ?? 0) >= 40 ? 'bg-amber-400' : 'bg-red-400') }}"
+                         style="width: {{ $part['percentage'] ?? 0 }}%"></div>
+                </div>
+                <div class="w-28 text-right text-sm">
+                    @if ($part['percentage'] !== null)
+                        <span class="font-semibold">{{ Format::number($part['score'], 1) }}/{{ Format::number($part['max'], 0) }}</span>
+                        <span class="text-slate-400"> · {{ Format::percent($part['percentage'], 0) }}</span>
+                    @else
+                        <span class="text-slate-400">—</span>
+                    @endif
+                </div>
+            </div>
+        @empty
+            <p class="text-sm text-slate-500">Aucune partie corrigeable disponible.</p>
+        @endforelse
+
+        <h2 class="font-semibold mb-3 mt-6">Points à améliorer</h2>
+        @php
+            $hints = [
+                'hoeren' => 'Ré-écoutez les passages des questions ratées sans note : travaillez l\'écoute sélective (qui ? quoi ? pourquoi ? ce qui est omis ?).',
+                'lesen' => 'Re-lisez les passages du texte correspondant aux questions ratées et reformulez les réponses piégées avec vos propres mots.',
+            ];
+            $withIssues = collect($partSummary)->filter(fn ($p) => count($p['issues']) > 0);
+        @endphp
+        @forelse ($withIssues as $part)
+            <div class="mb-3 text-sm rounded-lg bg-amber-50 border border-amber-200 p-3">
+                <div class="font-medium text-amber-900">{{ $part['skill_label'] }} — {{ $part['title'] }}</div>
+                <ul class="mt-1 list-disc list-inside text-slate-600 space-y-0.5">
+                    @foreach ($part['issues'] as $issue)
+                        <li>{{ \Illuminate\Support\Str::limit($issue, 140) }}</li>
+                    @endforeach
+                </ul>
+                @if (isset($hints[$part['skill']]))
+                    <p class="text-xs text-slate-500 mt-2">{{ $hints[$part['skill']] }}</p>
+                @endif
+            </div>
+        @empty
+            <p class="text-sm text-slate-500">Bonne maîtrise globale : aucun point à améliorer majeur détecté sur les parties corrigées.</p>
+        @endforelse
+    </div>
 
     <div class="bg-white border border-slate-200 rounded-2xl p-5 mt-6">
         <h2 class="font-semibold mb-3">Correction détaillée (Lesen / Hören)</h2>

@@ -85,9 +85,12 @@ class FormService
         }
 
         // Indexer le pool par l'ID de question : indispensable pour que
-        // `only` / `except` fonctionnent (le résultat de `get()` est indexé
-        // par position, pas par clé primaire).
-        $pool = $pool->keyBy(fn (Question $q) => (int) $q->getKey());
+        // `except` fonctionne (le résultat de `get()` est indexé par
+        // position, pas par clé primaire). `toBase()` est CRITIQUE :
+        // Eloquent\Collection::except() ré-indexe en array_values()
+        // (clés 0..N-1), ce qui détruit les clés ID et permet de
+        // re-sélectionner la même question → forme raccourcie.
+        $pool = $pool->keyBy(fn (Question $q) => (int) $q->getKey())->toBase();
 
         $excludedSet = array_map('intval', $excluded);
         $available = $pool->filter(fn (Question $q) => ! in_array((int) $q->id, $excludedSet, true));

@@ -10,6 +10,7 @@ use App\Models\Attempt;
 use App\Models\AttemptExercise;
 use App\Models\WritingSubmission;
 use App\Services\Exam\ExamService;
+use App\Services\Exam\QuestionTimerService;
 use App\Services\Exam\TimerService;
 use Illuminate\Http\Request;
 
@@ -21,6 +22,7 @@ class ExamController extends Controller
     public function __construct(
         private ExamService $exam,
         private TimerService $timer,
+        private QuestionTimerService $questionTimer,
     ) {}
 
     /** Affiche la tâche courante autorisée (ou redirige vers les résultats). */
@@ -79,6 +81,28 @@ class ExamController extends Controller
             : redirect()->route('results.show', $attempt);
     }
 
+    /**
+     * Passe à la question suivante (bouton SUIVANT) : verrouille la question
+     * courante, démarre le timer de la suivante, ou finalise la tâche si
+     * c'était la dernière question. Le serveur reste l'autorité.
+     */
+    public function next(Request $request, Attempt $attempt, AttemptExercise $attemptExercise)
+    {
+        $this->authorize('interact', $attempt);
+
+        abort_unless($attemptExercise->attempt_id === $attempt->id, 404);
+
+        $result = $this->exam->advanceQuestion($attempt, $attemptExercise);
+
+        if ($request->wantsJson()) {
+            return response()->json(['ok' => true] + $result);
+        }
+
+        return isset($result['redirect'])
+            ? redirect($result['redirect'])
+            : redirect()->route('exam.show', $attempt);
+    }
+
     /** Point de synchronisation du temps (source = serveur). */
     public function timer(Request $request, Attempt $attempt)
     {
@@ -90,12 +114,35 @@ class ExamController extends Controller
         }
 
         $this->timer->sync($current);
+        $this->questionTimer->sync($current->refresh());
+
+        $current = $current->refresh();
+
+        if ($current->state()->isFinal()) {
+            return response()->json([
+                'finished' => true,
+                'exercise_id' => $current->exercise_id,
+                'redirect' => route('exam.show', $attempt),
+            ]);
+        }
+
+        // Dernière question chronométrée dépassée : le serveur clôture la tâche.
+        $closed = $this->exam->closeIfLastQuestionExpired($attempt, $current);
+        if ($closed !== null) {
+            return response()->json([
+                'finished' => true,
+                'exercise_id' => $current->exercise_id,
+                'redirect' => $closed['redirect'] ?? route('exam.show', $attempt),
+            ]);
+        }
 
         return response()->json([
-            'finished' => $current->state()->isFinal(),
+            'finished' => false,
             'exercise_id' => $current->exercise_id,
-            'timer' => $this->timer->display($current->refresh()),
-            'redirect' => $current->state()->isFinal() ? route('exam.show', $attempt) : null,
+            'timer' => $this->timer->display($current),
+            'question_timer' => $this->questionTimer->display($current),
+            'question' => $this->exam->questionPayload($current),
+            'redirect' => null,
         ]);
     }
 
@@ -106,6 +153,14 @@ class ExamController extends Controller
         $questions = $attemptExercise->formQuestions();
         $questions->load('answerOptions');
         $attemptExercise->exercise->loadMissing('media');
+
+        // Timer par question : le client ne reçoit que la question en cours
+        // (les questions futures restent côté serveur).
+        $questionTimerData = $this->questionTimer->display($attemptExercise);
+        if ($questionTimerData['enabled']) {
+            $currentQuestion = $attemptExercise->currentQuestion();
+            $questions = collect($currentQuestion ? [$currentQuestion] : []);
+        }
 
         $answers = $attempt->answers()
             ->where('attempt_exercise_id', $attemptExercise->id)
@@ -146,6 +201,9 @@ class ExamController extends Controller
             'questions' => $questions,
             'answers' => $answers,
             'timer' => $this->timer->display($attemptExercise),
+            'questionTimer' => $questionTimerData,
+            'currentQuestionIndex' => $attemptExercise->questionIndex(),
+            'totalQuestions' => $attemptExercise->formQuestions()->count(),
             'progress' => $progress,
             'indexInSection' => $indexInSection === false ? 0 : $indexInSection,
             'sectionCount' => $sectionExercises->count(),

@@ -12,19 +12,29 @@ use RuntimeException;
  */
 class ExamException extends RuntimeException
 {
-    public function __construct(string $message, int $status = 422, ?\Throwable $previous = null)
-    {
+    public function __construct(
+        string $message,
+        int $status = 422,
+        private string $reason = 'error',
+        ?\Throwable $previous = null,
+    ) {
         parent::__construct($message, $status, $previous);
     }
 
-    public static function locked(string $message = 'Cet exercice est verrouillé.'): self
+    /** Raison machine (ex. question_locked, exercise_expired) pour le client. */
+    public function reason(): string
     {
-        return new self($message, 423);
+        return $this->reason;
+    }
+
+    public static function locked(string $message = 'Cet exercice est verrouillé.', string $reason = 'exercise_locked'): self
+    {
+        return new self($message, 423, $reason);
     }
 
     public static function expired(string $message = 'Le temps imparti pour cet exercice est écoulé.'): self
     {
-        return new self($message, 423);
+        return new self($message, 423, 'exercise_expired');
     }
 
     public static function unauthorized(string $message = 'Accès non autorisé à cet exercice.'): self

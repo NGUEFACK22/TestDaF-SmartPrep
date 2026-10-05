@@ -27,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json([
                     'ok' => false,
                     'locked' => in_array($status, [403, 423], true),
+                    'reason' => $e->reason(),
                     'message' => $e->getMessage(),
                 ], $status);
             }

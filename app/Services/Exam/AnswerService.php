@@ -47,6 +47,17 @@ class AnswerService
             throw new ExamException('Cette question ne fait pas partie de la tâche en cours.', 422);
         }
 
+        // 2c) La question courante seule accepte une réponse (verrouillage
+        //     séquentiel + timer par question, autorité serveur).
+        $this->timer->sync($attemptExercise->refresh());
+
+        if (! $attemptExercise->acceptsAnswerFor($question)) {
+            throw ExamException::locked(
+                'Cette question est verrouillée : répondez à la question en cours dans le temps imparti.',
+                'question_locked'
+            );
+        }
+
         if ($attemptExercise->state()->isFinal()) {
             throw ExamException::locked('Cet exercice est terminé : les réponses ne peuvent plus être modifiées.');
         }

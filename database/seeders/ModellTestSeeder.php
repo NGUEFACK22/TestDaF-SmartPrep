@@ -103,8 +103,10 @@ class ModellTestSeeder extends Seeder
             array_values($pool['lesen_new'] ?? []),
         );
 
+        // Timer par question : 600 s de tâche, 2 questions par forme → 300 s
+        // chacune (navigation séquentielle, autorité serveur).
         foreach ($questions as $qIndex => $q) {
-            $this->singleChoice($exercise, $qIndex, $q);
+            $this->singleChoice($exercise, $qIndex, $q, 300);
         }
 
         $exercise2 = Exercise::create([
@@ -133,6 +135,7 @@ class ModellTestSeeder extends Seeder
                 'position' => $pos,
                 'prompt' => 'Welche Wörter fehlen? (Zwei passende Wörter aus dem Text.)',
                 'points' => 2,
+                'time_limit_seconds' => 300,
                 'difficulty' => 'C1',
                 'correct_answer' => $pair,
                 'explanation' => 'Beide Begriffe passen in den Zusammenhang.',
@@ -140,7 +143,7 @@ class ModellTestSeeder extends Seeder
         }
     }
 
-    private function singleChoice(Exercise $exercise, int $position, array $q): void
+    private function singleChoice(Exercise $exercise, int $position, array $q, ?int $timeLimit = null): void
     {
         $question = Question::create([
             'exercise_id' => $exercise->id,
@@ -149,6 +152,7 @@ class ModellTestSeeder extends Seeder
             'position' => $position,
             'prompt' => $q['prompt'],
             'points' => 1,
+            'time_limit_seconds' => $timeLimit,
             'correct_answer' => $q['correct'],
             'explanation' => $q['explanation'],
         ]);
@@ -194,8 +198,9 @@ class ModellTestSeeder extends Seeder
             array_values($pool['hoeren_new'] ?? []),
         );
 
+        // Timer par question : 300 s de tâche, 1 question par forme → 300 s.
         foreach ($questions as $qIndex => $q) {
-            $this->singleChoice($exercise, $qIndex, $q);
+            $this->singleChoice($exercise, $qIndex, $q, 300);
         }
     }
 

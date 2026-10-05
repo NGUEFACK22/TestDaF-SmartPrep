@@ -2,6 +2,7 @@
     use App\Support\Format;
     $skill = $exercise->skill;
     $questionCount = $questions->count();
+    $timed = (bool) ($questionTimer['enabled'] ?? false);
 
     $config = [
         'attemptId' => $attempt->id,
@@ -29,6 +30,9 @@
         ])->values(),
         'answers' => $answers,
         'timer' => $timer,
+        'questionTimer' => $questionTimer,
+        'currentQuestionIndex' => (int) ($currentQuestionIndex ?? 0),
+        'totalQuestions' => (int) ($totalQuestions ?? $questionCount),
         'autosaveInterval' => (int) config('testdaf.exam.autosave_interval', 10),
         'writing' => $writing,
         'endpoints' => [
@@ -37,6 +41,7 @@
             'speaking' => route('api.speaking.store', $attempt),
             'timer' => route('exam.timer', $attempt),
             'complete' => route('exam.complete', [$attempt, $attemptExercise]),
+            'next' => route('exam.next', [$attempt, $attemptExercise]),
             'redirect' => route('results.show', $attempt),
         ],
     ];
@@ -64,6 +69,14 @@
             <span class="font-medium">{{ $skill->label() }}</span>
             <span class="text-slate-400 text-sm">Aufgabe {{ $indexInSection + 1 }} von {{ $sectionCount }}</span>
         </div>
+        @if ($timed)
+            <div class="text-right hidden sm:block">
+                <div class="text-xs text-slate-400">
+                    Frage <span id="question-progress" class="font-mono text-slate-200">{{ $currentQuestionIndex + 1 }} / {{ $totalQuestions }}</span>
+                </div>
+                <div class="font-mono text-xl" data-question-timer-label>--:--</div>
+            </div>
+        @endif
         <div class="text-right">
             <div class="text-xs text-slate-400">Temps restant</div>
             <div class="font-mono text-xl" data-timer-label>{{ Format::clock($timer['remaining_seconds']) }}</div>
@@ -72,6 +85,11 @@
     <div class="h-1.5 bg-slate-700">
         <div class="exam-timer-bar h-full bg-blue-500" data-timer-bar style="width: 100%"></div>
     </div>
+    @if ($timed)
+        <div class="h-1 bg-slate-700">
+            <div class="h-full bg-emerald-400 transition-all" data-question-timer-bar style="width: 100%"></div>
+        </div>
+    @endif
 </header>
 
 <main class="mx-auto max-w-5xl px-4 py-6">

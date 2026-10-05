@@ -3,17 +3,68 @@
 @section('title', 'Préparation')
 
 @section('content')
-    <h1 class="text-2xl font-bold">Préparation</h1>
-    <p class="text-sm text-slate-500 mb-6">Réviser par compétence, puis passer aux Modelltests.</p>
+    @php use App\Support\Format; @endphp
 
-    <div class="grid md:grid-cols-2 gap-4">
-        <a href="{{ route('notifications.index') }}" class="bg-white border border-slate-200 rounded-2xl p-5 hover:border-blue-300">
-            <div class="font-semibold">Mes notifications</div>
-            <div class="text-sm text-slate-500 mt-1">Corrections disponibles, analyses IA terminées, nouveaux contenus.</div>
-        </a>
-        <a href="{{ route('modelltests.index') }}" class="bg-white border border-slate-200 rounded-2xl p-5 hover:border-blue-300">
-            <div class="font-semibold">Modelltests</div>
-            <div class="text-sm text-slate-500 mt-1">Reproduire les conditions d'un examen numérique.</div>
-        </a>
+    <h1 class="text-2xl font-bold">Préparation</h1>
+    <p class="text-sm text-slate-500 mb-6">
+        Choisissez votre niveau pour commencer un test, ou réviser par compétence.
+    </p>
+
+    <div class="grid md:grid-cols-3 sm:grid-cols-2 gap-4">
+        @foreach ($levels as $level)
+            <div class="bg-white border rounded-2xl p-5 flex flex-col gap-3
+                        {{ $level['tests']->isNotEmpty() ? 'border-slate-200 hover:border-blue-300' : 'border-slate-200 opacity-70' }}">
+                <div class="flex items-center justify-between">
+                    <span class="text-3xl font-bold {{ $level['tests']->isNotEmpty() ? 'text-blue-700' : 'text-slate-400' }}">
+                        {{ $level['value'] }}
+                    </span>
+                    @if ($level['tests']->isNotEmpty())
+                        <span class="rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                            {{ $level['tests']->count() }} test{{ $level['tests']->count() > 1 ? 's' : '' }}
+                        </span>
+                    @else
+                        <span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">À venir</span>
+                    @endif
+                </div>
+
+                <p class="text-sm text-slate-500 flex-1">{{ $level['description'] }}</p>
+
+                @if ($level['last_result'])
+                    <div class="text-xs text-slate-500">
+                        Dernier score :
+                        <strong class="text-slate-800">{{ Format::percent($level['last_result']['percentage'], 0) }}</strong>
+                        · {{ $level['last_result']['date']->format('d/m/Y') }}
+                        <a class="text-blue-600 hover:underline" href="{{ route('results.show', $level['last_result']['attempt_id']) }}">Voir</a>
+                    </div>
+                @endif
+
+                @if ($level['direct_start'])
+                    <form method="POST" action="{{ route('preparation.start', $level['value']) }}">
+                        @csrf
+                        <button class="w-full rounded-lg bg-blue-600 text-white px-4 py-2.5 text-sm font-semibold hover:bg-blue-700">
+                            Commencer le test {{ $level['value'] }}
+                        </button>
+                    </form>
+                @elseif ($level['tests']->isNotEmpty())
+                    <a href="{{ route('modelltests.index') }}"
+                       class="w-full text-center rounded-lg border border-blue-200 bg-blue-50 text-blue-700 px-4 py-2.5 text-sm font-semibold hover:bg-blue-100">
+                        Choisir un test {{ $level['value'] }}
+                    </a>
+                @endif
+            </div>
+        @endforeach
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-2xl p-5 mt-6">
+        <h2 class="font-semibold mb-3">Réviser par compétence</h2>
+        <div class="grid md:grid-cols-4 gap-3">
+            @foreach (\App\Enums\Skill::sequence() as $skill)
+                <a href="{{ route('preparation.show', $skill->value) }}"
+                   class="rounded-xl border border-slate-200 p-4 hover:border-blue-300">
+                    <div class="font-medium">{{ $skill->label() }}</div>
+                    <div class="text-xs text-slate-500 mt-1">Méthode C1, exercices par difficulté, progression.</div>
+                </a>
+            @endforeach
+        </div>
     </div>
 @endsection

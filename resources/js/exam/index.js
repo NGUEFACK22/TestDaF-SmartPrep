@@ -1,4 +1,4 @@
-import { ServerTimer } from './timer';
+import { ServerTimer, QuestionTimer } from './timer';
 import { renderQuestion } from './questionRenderer';
 import { initWriting } from './writing';
 import { initSpeaking } from './speaking';
@@ -55,16 +55,35 @@ function init(cfg) {
     const setState = (text) => { if (stateEl) stateEl.textContent = text; };
 
     // ------------------------------------------------ Rendu des questions
+    // Mode chronométré : le serveur ne fournit QUE la question en cours ;
+    // aucune question future n'est exposée au client (anti-cheat).
+    const timed = !!(cfg.questionTimer && cfg.questionTimer.enabled);
     const container = document.getElementById('questions-container');
-    const blocks = [];
+    let blocks = [];
+    let currentQuestion = null;
+    let questionIndex = cfg.currentQuestionIndex || 0;
+    let questionTotal = cfg.totalQuestions || 1;
 
-    if (container) {
-        (cfg.questions || []).forEach((question) => {
-            const existing = cfg.answers ? cfg.answers[question.id] ?? null : null;
-            const el = renderQuestion(question, existing);
-            container.appendChild(el);
-            blocks.push({ question, el });
-        });
+    function renderCurrentQuestion(question) {
+        if (!container || !question) return;
+        const existing = cfg.answers ? cfg.answers[question.id] ?? null : null;
+        const el = renderQuestion(question, existing);
+        container.replaceChildren(el);
+        currentQuestion = question;
+        blocks = [{ question, el }];
+    }
+
+    if (container && Array.isArray(cfg.questions) && cfg.questions.length > 0) {
+        if (timed) {
+            renderCurrentQuestion(cfg.questions[0]);
+        } else {
+            cfg.questions.forEach((question) => {
+                const existing = cfg.answers ? cfg.answers[question.id] ?? null : null;
+                const el = renderQuestion(question, existing);
+                container.appendChild(el);
+                blocks.push({ question, el });
+            });
+        }
     }
 
     const collect = () => blocks.map(({ question, el }) => ({
@@ -92,6 +111,13 @@ function init(cfg) {
 
             const locked = results.find((r) => r && r.locked);
             if (locked) {
+                // Verrou de question (temps de la question écoulé) : on demande
+                // au serveur de faire avancer (pas de sortie de l'examen).
+                if (timed && locked.reason === 'question_locked') {
+                    setState('Question clôturée…');
+                    advance();
+                    return;
+                }
                 setState('Temps écoulé');
                 window.location = cfg.endpoints.redirect;
                 return;
@@ -138,6 +164,20 @@ function init(cfg) {
     timer.onExpire = expire;
     timer.start();
 
+    // --------------------------------------------- Timer par question
+    let questionTimer = null;
+
+    if (timed && cfg.endpoints.next) {
+        questionTimer = new QuestionTimer({
+            label: document.querySelector('[data-question-timer-label]'),
+            bar: document.querySelector('[data-question-timer-bar]'),
+            warningSeconds: 10,
+        });
+        questionTimer.sync(cfg.questionTimer);
+        questionTimer.onExpire = () => { if (!advancing) advance(); };
+        questionTimer.start();
+    }
+
     if (cfg.endpoints.timer) {
         setInterval(async () => {
             try {
@@ -151,14 +191,79 @@ function init(cfg) {
                     return;
                 }
                 if (data.timer) timer.sync(data.timer);
+                if (timed && questionTimer && data.question_timer) {
+                    questionTimer.sync(data.question_timer);
+                    questionTimer.start();
+                    questionIndex = data.question_timer.index ?? questionIndex;
+                    questionTotal = data.question_timer.total ?? questionTotal;
+                    const progress = document.getElementById('question-progress');
+                    if (progress) progress.textContent = `${questionIndex + 1} / ${questionTotal}`;
+                    // Le serveur a fait avancer la question (temps dépassé) :
+                    // on affiche la nouvelle question sans recharger la page.
+                    if (data.question && currentQuestion && data.question.id !== currentQuestion.id) {
+                        renderCurrentQuestion(data.question);
+                    }
+                }
             } catch (e) { /* silencieux : le serveur reste l'autorité */ }
         }, 15000);
     }
 
-    // ------------------------------------------------ Bouton WEITER
+    // --------------------------------------------- Avancer à la question suivante
+    let advancing = false;
+
+    async function advance() {
+        if (!cfg.endpoints.next || advancing) return;
+        advancing = true;
+        setState('Validation…');
+
+        try {
+            // Sauvegarde de la réponse en cours avant l'avancement serveur.
+            await saveAll(false);
+            const result = await postJson(cfg.endpoints.next, {});
+
+            if (!result || result.ok === false || result.redirect) {
+                window.location = result?.redirect || cfg.endpoints.redirect;
+                return;
+            }
+
+            if (result.outcome === 'advanced' && result.question) {
+                questionIndex = result.question_timer?.index ?? questionIndex + 1;
+                questionTotal = result.question_timer?.total ?? questionTotal;
+                renderCurrentQuestion(result.question);
+                if (result.question_timer && questionTimer) {
+                    questionTimer.sync(result.question_timer);
+                    questionTimer.start();
+                }
+                const progress = document.getElementById('question-progress');
+                if (progress) progress.textContent = `${questionIndex + 1} / ${questionTotal}`;
+                const btn = document.getElementById('btn-weiter');
+                if (btn) btn.textContent = (questionIndex < questionTotal - 1) ? 'SUIVANT' : 'WEITER';
+                setState('Question enregistrée');
+            }
+        } catch (e) {
+            window.location = cfg.endpoints.redirect;
+        } finally {
+            advancing = false;
+        }
+    }
+
+    // ------------------------------------------------ Bouton WEITER / SUIVANT
     const weiter = document.getElementById('btn-weiter');
     if (weiter) {
+        if (timed) {
+            // Une question à la fois : SUIVANT (WEITER sur la dernière).
+            weiter.textContent = (questionIndex < questionTotal - 1) ? 'SUIVANT' : 'WEITER';
+        }
+
         weiter.addEventListener('click', async () => {
+            if (timed) {
+                // Sauvegarde de la réponse + avancement côté serveur
+                // (le serveur clôture la tâche sur la dernière question).
+                weiter.disabled = true;
+                await advance();
+                return;
+            }
+
             weiter.disabled = true;
             setState('Validation…');
 

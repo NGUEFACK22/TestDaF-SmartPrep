@@ -34,6 +34,7 @@ class ResultController extends Controller
             'attempt' => $attempt,
             'results' => $results,
             'aiPending' => $aiPending,
+            'partSummary' => $this->statistics->partSummary($attempt),
             'weakTypes' => $this->statistics->weakQuestionTypes($request->user(), 5),
         ]);
     }

@@ -30,6 +30,7 @@ class ExamService
         private TimerService $timer,
         private ScoringService $scoring,
         private FormService $forms,
+        private QuestionTimerService $questions,
     ) {}
 
     /** Démarre (ou reprend) une tentative sur un Modelltest. */
@@ -54,12 +55,12 @@ class ExamService
                 'started_at' => now(),
             ]);
 
+            // Ordre des parties = ordre des sections du test (position),
+            // ce qui permet à un test de positionnement de définir sa propre
+            // séquence (ex. Hören audio avant Lesen texte). Les Modelltests
+            // standards conservent l'ordre Lesen → Hören → Schreiben → Sprechen.
             $position = 0;
-            foreach (Skill::sequence() as $skill) {
-                $section = $test->sections()->where('skill', $skill->value)->first();
-                if (! $section) {
-                    continue;
-                }
+            foreach ($test->sections()->orderBy('position')->get() as $section) {
                 foreach ($section->exercises()->get() as $exercise) {
                     AttemptExercise::create([
                         'attempt_id' => $attempt->id,
@@ -166,7 +167,149 @@ class ExamService
             $ae->update(['status' => ExerciseState::Available]);
         }
 
-        return $this->timer->start($ae);
+        $started = $this->timer->start($ae);
+
+        // Chronomètre par question : question 0, temps propre initial.
+        $this->questions->reset($started->fresh());
+
+        return $started->fresh();
+    }
+
+    /**
+     * Avance à la question suivante (ou finalise la tâche).
+     *
+     * Utilisé par le bouton SUIVANT et l'expiration du timer de question.
+     * Le serveur vérifie que la question courante est répondu/expirée.
+     * Retourne 'advanced' (nouvelle question), 'exercise' (tâche suivante)
+     * ou 'finished' (fin du Modelltest).
+     */
+    public function advanceQuestion(Attempt $attempt, AttemptExercise $attemptExercise): array
+    {
+        abort_unless($attemptExercise->attempt_id === $attempt->id, 404);
+
+        // Synchronisation temps serveur (peut expirer/clore la tâche).
+        $attemptExercise = $this->timer->sync($attemptExercise->fresh());
+
+        if ($attemptExercise->state()->isFinal()) {
+            return $this->afterExerciseClosed($attempt, $attemptExercise);
+        }
+
+        if ($attemptExercise->isProductiveExercise()) {
+            return ['outcome' => 'exercise'];
+        }
+
+        // Avance forcée si le temps de la question courante est écoulé.
+        // Si sync() a déjà fait avancer l'index, l'action SUIVANT du
+        // candidat est consommée par cet avancement (pas de double saut).
+        $syncAdvanced = $this->questions->sync($attemptExercise);
+        $attemptExercise = $attemptExercise->fresh();
+
+        if ($attemptExercise->state()->isFinal()) {
+            return $this->afterExerciseClosed($attempt, $attemptExercise);
+        }
+
+        // Dernière question dépassée : clôture immédiate de la tâche.
+        $closed = $this->closeIfLastQuestionExpired($attempt, $attemptExercise);
+        if ($closed !== null) {
+            return $closed;
+        }
+
+        if ($syncAdvanced) {
+            return [
+                'outcome' => 'advanced',
+                'question' => $this->questionPayload($attemptExercise),
+                'timer' => $this->timer->display($attemptExercise),
+                'question_timer' => $this->questions->display($attemptExercise),
+            ];
+        }
+
+        $advanced = $this->questions->advance($attemptExercise);
+
+        if (! $advanced) {
+            $this->completeExercise($attempt, $attemptExercise->exercise_id);
+
+            return $this->afterExerciseClosed($attempt, $attemptExercise->fresh());
+        }
+
+        $attemptExercise = $attemptExercise->fresh();
+
+        return [
+            'outcome' => 'advanced',
+            'question' => $this->questionPayload($attemptExercise),
+            'timer' => $this->timer->display($attemptExercise),
+            'question_timer' => $this->questions->display($attemptExercise),
+        ];
+    }
+
+    /**
+     * Si la DERNIÈRE question est chronométrée et que son temps est écoulé,
+     * la tâche est close (toutes les questions ont été consommées).
+     * Retourne le résultat JSON de fin de tâche, ou null si rien à faire.
+     */
+    public function closeIfLastQuestionExpired(Attempt $attempt, AttemptExercise $ae): ?array
+    {
+        if ($ae->state()->isFinal() || $ae->isProductiveExercise()) {
+            return null;
+        }
+
+        $count = $ae->formQuestions()->count();
+
+        if ($ae->questionIndex() < $count - 1 || ! $ae->currentQuestionExpired()) {
+            return null;
+        }
+
+        $this->completeExercise($attempt, $ae->exercise_id);
+
+        return $this->afterExerciseClosed($attempt, $ae->fresh());
+    }
+
+    /** Résultat JSON uniforme après fermeture d'une tâche (complete/expire). */
+    private function afterExerciseClosed(Attempt $attempt, AttemptExercise $attemptExercise): array
+    {
+        $next = $attempt->fresh()->currentExercise();
+
+        if ($next === null) {
+            $this->finishAttempt($attempt->fresh());
+
+            return [
+                'outcome' => 'finished',
+                'redirect' => route('results.show', $attempt),
+            ];
+        }
+
+        return [
+            'outcome' => 'exercise',
+            'exercise_id' => $next->exercise_id,
+            'redirect' => route('exam.show', $attempt),
+        ];
+    }
+
+    /** Question courante sérialisée pour le frontend. */
+    public function questionPayload(AttemptExercise $attemptExercise): ?array
+    {
+        $question = $attemptExercise->currentQuestion();
+
+        if (! $question) {
+            return null;
+        }
+
+        $question->loadMissing('answerOptions');
+
+        return [
+            'id' => $question->id,
+            'type' => $question->type,
+            'prompt' => $question->prompt,
+            'points' => (float) $question->points,
+            'time_limit_seconds' => $question->time_limit_seconds !== null
+                ? (int) $question->time_limit_seconds
+                : null,
+            'data' => $question->data,
+            'answer_options' => $question->answerOptions->map(fn ($o) => [
+                'id' => $o->id,
+                'label' => $o->label,
+                'text' => $o->text,
+            ])->values()->all(),
+        ];
     }
 
     /**

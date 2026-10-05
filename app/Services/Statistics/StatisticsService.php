@@ -5,6 +5,7 @@ namespace App\Services\Statistics;
 use App\Enums\AttemptStatus;
 use App\Enums\Skill;
 use App\Models\Attempt;
+use App\Models\AttemptExercise;
 use App\Models\Result;
 use App\Models\User;
 use App\Models\UserAnswer;
@@ -19,6 +20,20 @@ class StatisticsService
     public function skillProgress(User $user): array
     {
         $attemptIds = $user->attempts()->pluck('id');
+
+        // Aucun essai : aucune requête inutile (gros gain sur Neon).
+        if ($attemptIds->isEmpty()) {
+            $out = [];
+            foreach (Skill::sequence() as $skill) {
+                $out[$skill->value] = [
+                    'label' => $skill->label(),
+                    'percentage' => 0.0,
+                ];
+            }
+
+            return $out;
+        }
+
         $out = [];
 
         foreach (Skill::sequence() as $skill) {
@@ -73,16 +88,76 @@ class StatisticsService
     /** Vue d'ensemble candidat. */
     public function overview(User $user): array
     {
+        $started = $user->attempts()->count();
+
+        // Aucun essai : zéro requête supplémentaire.
+        if ($started === 0) {
+            return [
+                'started' => 0,
+                'completed' => 0,
+                'average' => 0,
+                'last_attempt' => null,
+                'skill_progress' => $this->skillProgress($user),
+            ];
+        }
+
         $attempts = $user->attempts();
         $completed = (clone $attempts)->where('status', AttemptStatus::Completed->value);
 
         return [
-            'started' => (clone $attempts)->count(),
+            'started' => $started,
             'completed' => (clone $completed)->count(),
             'average' => round((float) (clone $completed)->avg('score'), 2),
             'last_attempt' => $user->attempts()->with('modellTest')->latest('id')->first(),
             'skill_progress' => $this->skillProgress($user),
         ];
+    }
+
+    /**
+     * Synthèse par partie pour la page résultats : score de chaque partie
+     * (exercice) + points à améliorer (prompts des questions ratées).
+     */
+    public function partSummary(Attempt $attempt): array
+    {
+        $attempt->loadMissing(['attemptExercises.exercise', 'answers.question']);
+
+        $parts = [];
+
+        foreach ($attempt->attemptExercises as $ae) {
+            $max = (float) ($ae->max_score ?? 0);
+            $score = (float) ($ae->score ?? 0);
+
+            $parts[] = [
+                'title' => $ae->exercise->title,
+                'skill_label' => $ae->exercise->skill->label(),
+                'skill' => $ae->exercise->skill->value,
+                'score' => $score,
+                'max' => $max,
+                'percentage' => $max > 0 ? round($score / $max * 100, 1) : null,
+                'issues' => $this->partIssues($attempt, $ae),
+            ];
+        }
+
+        return $parts;
+    }
+
+    /** Prompts (limités) des questions objectives ratées dans la forme de la partie. */
+    private function partIssues(Attempt $attempt, AttemptExercise $ae): array
+    {
+        if ($ae->exercise->skill->isProductive()) {
+            return [];
+        }
+
+        $formIds = $ae->formQuestions()->pluck('id');
+
+        return $attempt->answers
+            ->filter(fn ($answer) => $answer->is_correct === false)
+            ->filter(fn ($answer) => $formIds->contains($answer->question_id))
+            ->map(fn ($answer) => $answer->question?->prompt)
+            ->filter()
+            ->take(3)
+            ->values()
+            ->all();
     }
 
     /** Types de questions faibles (erreurs récurrentes). */

@@ -188,6 +188,10 @@ class HoerenDemoSeeder extends Seeder
      */
     private function createQuestions(Exercise $exercise, array $spec): void
     {
+        // Timer par question : le temps de la démo est réparti sur les
+        // questions officielles (plafonné par expires_at de la tâche).
+        $perQuestion = max(30, (int) ceil((int) $exercise->duration_seconds / max(1, count($spec))));
+
         foreach ($spec as $position => $def) {
             $question = Question::create([
                 'exercise_id' => $exercise->id,
@@ -195,6 +199,7 @@ class HoerenDemoSeeder extends Seeder
                 'position' => $position + 1,
                 'prompt' => (string) $def['prompt'],
                 'points' => (int) ($def['points'] ?? 1),
+                'time_limit_seconds' => (int) ($def['time_limit_seconds'] ?? $perQuestion),
                 'correct_answer' => $def['correct_answer'] ?? null,
                 'explanation' => $def['explanation'] ?? null,
                 'data' => (array) ($def['data'] ?? []),

@@ -18,14 +18,7 @@
                 <nav class="hidden md:flex items-center gap-1 text-sm">
                     <a href="{{ route('dashboard') }}" class="px-3 py-2 rounded-lg hover:bg-slate-100 {{ request()->routeIs('dashboard') ? 'bg-slate-100 font-semibold' : '' }}">Tableau de bord</a>
                     <a href="{{ route('modelltests.index') }}" class="px-3 py-2 rounded-lg hover:bg-slate-100 {{ request()->routeIs('modelltests.*') ? 'bg-slate-100 font-semibold' : '' }}">Modelltests</a>
-                    <div class="relative group">
-                        <button class="px-3 py-2 rounded-lg hover:bg-slate-100">Préparation ▾</button>
-                        <div class="absolute hidden group-hover:block bg-white border border-slate-200 rounded-lg shadow-lg py-1 w-40 z-20">
-                            @foreach (\App\Enums\Skill::sequence() as $skill)
-                                <a href="{{ route('preparation.show', $skill->value) }}" class="block px-4 py-2 hover:bg-slate-100">{{ $skill->label() }}</a>
-                            @endforeach
-                        </div>
-                    </div>
+                    <a href="{{ route('preparation.index') }}" class="px-3 py-2 rounded-lg hover:bg-slate-100 {{ request()->routeIs('preparation.*') ? 'bg-slate-100 font-semibold' : '' }}">Préparation</a>
                     <a href="{{ route('notifications.index') }}" class="px-3 py-2 rounded-lg hover:bg-slate-100 {{ request()->routeIs('notifications.*') ? 'bg-slate-100 font-semibold' : '' }}">Notifications</a>
                     @if (auth()->user()->isAdmin())
                         <a href="{{ route('admin.dashboard') }}" class="px-3 py-2 rounded-lg hover:bg-slate-100 {{ request()->routeIs('admin.*') ? 'bg-slate-100 font-semibold' : '' }}">Administration</a>

@@ -240,9 +240,11 @@ class DynamicFormTest extends TestCase
         $first = $attempt->attemptExercises()->orderBy('position')->first();
         $ae = $engine->startExercise($attempt, $first->exercise_id);
 
-        // Répond correctement UNIQUEMENT aux questions de la forme.
+        // Répond correctement à chaque question de la forme, en suivant le
+        // chronomètre par question (réponse courante puis avancement serveur).
         foreach ($ae->formQuestions() as $question) {
-            $answers->save($attempt, $ae, $question, $question->correct_answer);
+            $answers->save($attempt, $ae->fresh(), $question, $question->correct_answer);
+            $engine->advanceQuestion($attempt, $ae->fresh());
         }
 
         $engine->completeExercise($attempt, $ae->exercise_id);

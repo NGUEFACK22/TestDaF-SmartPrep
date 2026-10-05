@@ -13,7 +13,7 @@ class Question extends Model
 
     protected $fillable = [
         'exercise_id', 'type', 'difficulty', 'position', 'prompt',
-        'points', 'data', 'correct_answer', 'explanation',
+        'points', 'time_limit_seconds', 'data', 'correct_answer', 'explanation',
     ];
 
     protected function casts(): array
