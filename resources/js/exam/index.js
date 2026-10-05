@@ -14,19 +14,32 @@ function csrfToken() {
     return document.querySelector('meta[name="csrf-token"]')?.content || '';
 }
 
-export async function postJson(url, payload) {
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            'X-CSRF-TOKEN': csrfToken(),
-            'X-Requested-With': 'XMLHttpRequest',
-        },
-        body: JSON.stringify(payload || {}),
-    });
+/**
+ * POST JSON avec timeout (30 s) : une requête qui traîne (cold start base,
+ * réseau) ne laisse jamais le bouton SUIVANT bloqué à l'infini. Le catch de
+ * l'appelant redirige vers exam.show où le serveur restaure l'état.
+ */
+export async function postJson(url, payload, timeoutMs = 30000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-    return response.json();
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-CSRF-TOKEN': csrfToken(),
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify(payload || {}),
+            signal: controller.signal,
+        });
+
+        return await response.json();
+    } finally {
+        clearTimeout(timer);
+    }
 }
 
 function debounce(fn, delay) {
@@ -101,44 +114,65 @@ function init(cfg) {
     // ------------------------------------------------ Sauvegarde automatique
     let saving = false;
     let dirty = false;
+    let saveInFlight = null;
 
     async function saveAll(autosave = true) {
         if (!cfg.endpoints.answers || blocks.length === 0) return;
 
-        if (saving) { dirty = true; return; }
-        saving = true;
-        setState('Enregistrement…');
-
-        try {
-            const answers = collect();
-            const results = await Promise.all(
-                answers.map(({ question_id, answer }) =>
-                    postJson(cfg.endpoints.answers, { question_id, answer, autosave }))
-            );
-
-            const locked = results.find((r) => r && r.locked);
-            if (locked) {
-                // Verrou de question (temps écoulé) : le serveur reste l'autorité.
-                // On ne "avance" plus ici — on resynchronise avec /timer qui
-                // renvoie la question courante réelle. Seul le décompte local à
-                // zéro déclenche l'avancement (pas de double saut sur doublon).
-                if (timed && locked.reason === 'question_locked') {
-                    setState('Question clôturée…');
-                    await resync();
-                    return;
-                }
-                setState('Temps écoulé');
-                window.location = cfg.endpoints.redirect;
+        if (saving) {
+            dirty = true;
+            // Un flush explicite (SUIVANT / expiration) ne doit PAS se contenter
+            // de marquer "dirty" : il attend l'auto-sauvegarde en cours, puis
+            // re-sauve pour que la réponse venant d'être saisie ne soit pas
+            // perdue au moment où la question va être verrouillée.
+            if (autosave !== false) {
                 return;
             }
-
-            setState(autosave ? `Sauvegardé à ${new Date().toLocaleTimeString()}` : 'Enregistré');
-        } catch (e) {
-            setState('Erreur de sauvegarde — nouvelle tentative…');
-        } finally {
-            saving = false;
-            if (dirty) { dirty = false; saveAll(autosave); }
+            if (saveInFlight) {
+                try { await saveInFlight; } catch (e) { /* ignoré */ }
+            }
+            return saveAll(false);
         }
+
+        saving = true;
+        setState(autosave ? 'Enregistrement…' : 'Validation…');
+
+        saveInFlight = (async () => {
+            try {
+                const answers = collect();
+                const results = await Promise.all(
+                    answers.map(({ question_id, answer }) =>
+                        postJson(cfg.endpoints.answers, { question_id, answer, autosave })
+                    )
+                );
+
+                const locked = results.find((r) => r && r.locked);
+                if (locked) {
+                    // Verrou de question (temps écoulé) : le serveur reste l'autorité.
+                    // On ne "avance" plus ici — on resynchronise avec /timer qui
+                    // renvoie la question courante réelle. Seul le décompte local à
+                    // zéro déclenche l'avancement (pas de double saut sur doublon).
+                    if (timed && locked.reason === 'question_locked') {
+                        setState('Question clôturée…');
+                        await resync();
+                        return;
+                    }
+                    setState('Temps écoulé');
+                    window.location = cfg.endpoints.redirect;
+                    return;
+                }
+
+                setState(autosave ? `Sauvegardé à ${new Date().toLocaleTimeString()}` : 'Enregistré');
+            } catch (e) {
+                setState('Erreur de sauvegarde — nouvelle tentative…');
+            } finally {
+                saving = false;
+                saveInFlight = null;
+                if (dirty) { dirty = false; saveAll(autosave); }
+            }
+        })();
+
+        await saveInFlight;
     }
 
     if (blocks.length > 0) {
@@ -199,9 +233,19 @@ function init(cfg) {
         if (!cfg.endpoints.timer || resyncing) return;
         resyncing = true;
         try {
-            const response = await fetch(cfg.endpoints.timer, {
-                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-            });
+            // Timeout court : un GET qui traîne ne doit pas bloquer les
+            // prochaines resynchronisations (elles se répètent toutes les 15 s).
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 20000);
+            let response;
+            try {
+                response = await fetch(cfg.endpoints.timer, {
+                    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    signal: controller.signal,
+                });
+            } finally {
+                clearTimeout(timer);
+            }
             const data = await response.json();
 
             if (data.finished) {
@@ -217,9 +261,11 @@ function init(cfg) {
                 const progress = document.getElementById('question-progress');
                 if (progress) progress.textContent = `${questionIndex + 1} / ${questionTotal}`;
                 // Le serveur a fait avancer la question (temps dépassé) :
-                // on affiche la nouvelle question sans recharger la page.
+                // on affiche la nouvelle question sans recharger la page,
+                // avec un message explicite (plus de "saut" mystérieux).
                 if (data.question && currentQuestion && data.question.id !== currentQuestion.id) {
                     renderCurrentQuestion(data.question);
+                    setState('⏱ Temps écoulé — question suivante');
                 }
             }
         } catch (e) { /* silencieux : le serveur reste l'autorité */ } finally {
@@ -266,7 +312,12 @@ function init(cfg) {
                 const btn = document.getElementById('btn-weiter');
                 if (btn) btn.textContent = (questionIndex < questionTotal - 1) ? 'SUIVANT' : 'WEITER';
                 setState('Question enregistrée');
+                return;
             }
+
+            // Réponse inattendue (ni redirection, ni question) : on recharge
+            // l'examen — le serveur restaure l'état autoritaire.
+            window.location = cfg.endpoints.redirect;
         } catch (e) {
             window.location = cfg.endpoints.redirect;
         } finally {

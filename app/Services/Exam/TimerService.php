@@ -50,16 +50,17 @@ class TimerService
             return;
         }
 
+        $timeSpent = $this->elapsedSeconds($attemptExercise);
         $attemptExercise->update([
             'status' => $expired ? ExerciseState::Expired : ExerciseState::Completed,
             'completed_at' => now(),
             'answers_locked' => true,
-            'time_spent' => $this->elapsedSeconds($attemptExercise),
+            'time_spent' => $timeSpent,
         ]);
 
         $this->log($attemptExercise->attempt, $expired ? 'exercise_expired' : 'exercise_completed', [
             'exercise_id' => $attemptExercise->exercise_id,
-            'time_spent' => $attemptExercise->time_spent,
+            'time_spent' => $timeSpent,
         ]);
     }
 
