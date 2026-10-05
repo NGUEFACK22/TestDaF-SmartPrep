@@ -98,6 +98,25 @@ class LevelTestFlowTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_starting_a_level_picks_the_first_untried_test_then_rotates(): void
+    {
+        $engine = app(ExamService::class);
+        $b2Tests = ModellTest::where('difficulty', 'B2')->orderBy('number')->get();
+        $this->assertGreaterThanOrEqual(2, $b2Tests->count());
+
+        // Le candidat a déjà tenté le premier test B2 (ex. depuis la liste).
+        $engine->startAttempt($this->user, $b2Tests->first());
+
+        // Le clic sur la carte B2 lance alors le SUIVANT test non tenté.
+        $this->actingAs($this->user)
+            ->post(route('preparation.start', 'B2'))
+            ->assertRedirect();
+
+        $attempt = Attempt::latest('id')->first();
+        $this->assertSame($b2Tests[1]->id, $attempt->modell_test_id);
+        $this->assertSame($this->user->id, $attempt->user_id);
+    }
+
     public function test_audio_part_is_fixed_and_text_part_is_a_four_question_form(): void
     {
         $engine = app(ExamService::class);

@@ -9,9 +9,11 @@ use App\Models\Attempt;
 use App\Models\Exercise;
 use App\Models\ModellTest;
 use App\Models\Result;
+use App\Models\User;
 use App\Models\UserAnswer;
 use App\Services\Exam\ExamService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 
@@ -54,7 +56,6 @@ class PreparationController extends Controller
                 'value' => $value,
                 'description' => $description,
                 'tests' => $tests,
-                'direct_start' => $tests->isNotEmpty() && $tests->count() === 1,
                 'last_result' => $this->lastLevelResult($user, $tests),
             ];
         }
@@ -62,18 +63,58 @@ class PreparationController extends Controller
         return view('candidate.preparation.index', ['levels' => $levels]);
     }
 
-    /** Départ direct du test d'un niveau (POST : création d'une tentative). */
+    /**
+     * Départ direct du test d'un niveau (POST : création d'une tentative).
+     *
+     * Le test lancé est le premier (par numéro) que le candidat n'a pas
+     * encore tenté ; s'il a tout essayé, rotation vers celui dont sa
+     * dernière tentative est la plus ancienne. Une tentative en cours sur
+     * ce test est restaurée (voir ExamService::startAttempt).
+     */
     public function startLevel(Request $request, string $level)
     {
         $level = strtoupper($level);
         abort_unless(in_array($level, ['B1', 'B2', 'C1'], true), 404);
 
-        $test = ModellTest::published()->where('difficulty', $level)->orderBy('number')->first();
-        abort_unless($test, 404);
+        $tests = ModellTest::published()
+            ->where('difficulty', $level)
+            ->orderBy('number')
+            ->get();
 
+        abort_unless($tests->isNotEmpty(), 404);
+
+        $test = $this->nextTestForUser($request->user(), $tests);
         $attempt = $this->exam->startAttempt($request->user(), $test);
 
         return redirect()->route('exam.show', $attempt);
+    }
+
+    /**
+     * Choix du test du niveau à lancer pour ce candidat :
+     * 1) le premier test (par numéro) sans tentative ;
+     * 2) sinon, celui dont la dernière tentative est la plus ancienne.
+     */
+    private function nextTestForUser(User $user, Collection $tests): ModellTest
+    {
+        $lastAttemptPerTest = Attempt::query()
+            ->where('user_id', $user->id)
+            ->whereIn('modell_test_id', $tests->pluck('id'))
+            ->get(['id', 'modell_test_id'])
+            ->groupBy('modell_test_id')
+            ->map(fn ($group) => (int) $group->max('id'));
+
+        return $tests
+            ->sort(function (ModellTest $a, ModellTest $b) use ($lastAttemptPerTest) {
+                $aLast = $lastAttemptPerTest->get($a->id, 0);
+                $bLast = $lastAttemptPerTest->get($b->id, 0);
+
+                if ($aLast !== $bLast) {
+                    return $aLast <=> $bLast;
+                }
+
+                return $a->number <=> $b->number;
+            })
+            ->first();
     }
 
     private function lastLevelResult($user, $tests): ?array
