@@ -1,0 +1,78 @@
+# SYNPHONIE sur Render (offre gratuite) + Neon (Postgres gratuit) + R2 (stockage gratuit).
+# Déploiement : Render → New → Blueprint → choisir ce dépôt. Renseigner les
+# variables marquées sync: false (une seule fois). Voir docs/DEPLOYMENT_GRATUIT.md.
+services:
+  - type: web
+    name: synphonie
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /up
+    preDeployCommand: "php artisan migrate --force"
+    envVars:
+      - key: APP_NAME
+        value: SYNPHONIE
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_URL
+        sync: false # ex. https://synphonie.onrender.com (à renseigner après le 1er déploiement)
+      - key: APP_KEY
+        sync: false # générer en local : php artisan key:generate --show
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: warning
+      # --- Base Neon (Postgres serverless, offre gratuite) ---
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        sync: false # endpoint pooler Neon, ex. ep-xxx-pooler.eu-central-1.aws.neon.tech
+      - key: DB_PORT
+        value: 5432
+      - key: DB_DATABASE
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SSLMODE
+        value: require
+      - key: DB_ENDPOINT
+        sync: false # 1er segment du hostname (SNI pooler Neon)
+      # --- Files d'attente / cache / sessions (base, sans Redis) ---
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+      # --- Stockage privé R2 (S3-compatible, 10 Go gratuits) ---
+      - key: TESTDAF_MEDIA_DISK
+        value: s3
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_DEFAULT_REGION
+        value: auto
+      - key: AWS_BUCKET
+        sync: false
+      - key: AWS_ENDPOINT
+        sync: false # ex. https://<account-id>.r2.cloudflarestorage.com
+      # --- IA (optionnel) ---
+      - key: AI_ENABLED
+        value: false
+      - key: GEMINI_API_KEY
+        sync: false
+
+  # File d'attente + planificateur (abandons, purges) : 1 job/min traite
+  # UN job en attente puis le scheduler (largement suffisant en gratuit).
+  - type: cron
+    name: synphonie-worker
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    schedule: "* * * * *"
+    dockerCommand: "php artisan schedule:run && php artisan queue:work --once --tries=3 --timeout=280"
