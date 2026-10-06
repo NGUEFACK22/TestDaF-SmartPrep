@@ -11,7 +11,7 @@
     <header class="bg-white border-b border-slate-200">
         <div class="mx-auto max-w-7xl px-4 flex items-center justify-between h-16">
             <a href="{{ route('dashboard') }}" class="font-bold text-lg text-blue-700">
-                TestDaF <span class="text-slate-400 font-normal">· digital</span>
+                SYNPHONIE <span class="text-slate-400 font-normal">· TestDaF digital</span>
             </a>
 
             @auth
@@ -19,6 +19,7 @@
                     <a href="{{ route('dashboard') }}" class="px-3 py-2 rounded-lg hover:bg-slate-100 {{ request()->routeIs('dashboard') ? 'bg-slate-100 font-semibold' : '' }}">Tableau de bord</a>
                     <a href="{{ route('modelltests.index') }}" class="px-3 py-2 rounded-lg hover:bg-slate-100 {{ request()->routeIs('modelltests.*') ? 'bg-slate-100 font-semibold' : '' }}">Modelltests</a>
                     <a href="{{ route('preparation.index') }}" class="px-3 py-2 rounded-lg hover:bg-slate-100 {{ request()->routeIs('preparation.*') ? 'bg-slate-100 font-semibold' : '' }}">Préparation</a>
+                    <a href="{{ route('challenges.index') }}" class="px-3 py-2 rounded-lg hover:bg-slate-100 {{ request()->routeIs('challenges.*') ? 'bg-slate-100 font-semibold' : '' }}">Défis IA 🏆</a>
                     <a href="{{ route('notifications.index') }}" class="px-3 py-2 rounded-lg hover:bg-slate-100 {{ request()->routeIs('notifications.*') ? 'bg-slate-100 font-semibold' : '' }}">Notifications</a>
                     @if (auth()->user()->isAdmin())
                         <a href="{{ route('admin.dashboard') }}" class="px-3 py-2 rounded-lg hover:bg-slate-100 {{ request()->routeIs('admin.*') ? 'bg-slate-100 font-semibold' : '' }}">Administration</a>

@@ -111,6 +111,34 @@ class ExamController extends Controller
             : redirect()->route('exam.show', $attempt);
     }
 
+    /**
+     * Événement de proctoring léger (changement d'onglet, perte de focus,
+     * copier-coller). Informatif uniquement : ne bloque jamais le candidat,
+     * mais alimente exam_logs pour l'audit et la détection d'anomalies.
+     * Throttle 60/min côté route.
+     */
+    public function event(Request $request, Attempt $attempt)
+    {
+        $this->authorize('interact', $attempt);
+
+        $validated = $request->validate([
+            'event' => 'required|string|max:50|in:tab_hidden,tab_visible,focus_lost,focus_gained,paste,copy,fullscreen_exit',
+            'exercise_id' => 'nullable|integer',
+        ]);
+
+        \App\Models\ExamLog::create([
+            'user_id' => $request->user()->id,
+            'attempt_id' => $attempt->id,
+            'event' => 'proctoring_'.$validated['event'],
+            'payload' => [
+                'exercise_id' => $validated['exercise_id'] ?? $attempt->current_exercise_id,
+            ],
+            'ip' => $request->ip(),
+        ]);
+
+        return response()->json(['ok' => true]);
+    }
+
     /** Point de synchronisation du temps (source = serveur). */
     public function timer(Request $request, Attempt $attempt)
     {
@@ -160,6 +188,8 @@ class ExamController extends Controller
 
         $questions = $attemptExercise->formQuestions();
         $questions->load('answerOptions');
+        // Brassage des réponses : même ordre que le JSON (même graine).
+        $this->exam->applyOptionShuffle($questions, $attempt);
         $attemptExercise->exercise->loadMissing('media');
 
         // Timer par question : le client ne reçoit que la question en cours

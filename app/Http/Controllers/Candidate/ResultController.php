@@ -66,4 +66,31 @@ class ResultController extends Controller
             'evolution' => $this->statistics->evolution($request->user()),
         ]);
     }
+
+    /**
+     * Version imprimable (export PDF via le navigateur : Fichier → Imprimer → PDF).
+     * Sans dépendance lourde (dompdf) : HTML épuré + print CSS.
+     */
+    public function pdf(Request $request, Attempt $attempt)
+    {
+        $this->authorize('view', $attempt);
+
+        $attempt->load(['modellTest', 'results', 'attemptExercises.exercise']);
+
+        $results = $attempt->results->keyBy(fn ($r) => $r->skill->value);
+
+        $grade20 = $results->count() > 0
+            ? round($results->avg(fn ($r) => (float) $r->points20), 1)
+            : null;
+
+        return response()->view('candidate.results.pdf', [
+            'attempt' => $attempt,
+            'results' => $results,
+            'grade20' => $grade20,
+            'partSummary' => $this->statistics->partSummary($attempt),
+            'weakTypes' => $this->statistics->weakQuestionTypes($request->user(), 8),
+            'user' => $request->user(),
+            'generatedAt' => now(),
+        ])->header('Content-Disposition', 'inline; filename="rapport-testdaf-'.$attempt->id.'.html"');
+    }
 }

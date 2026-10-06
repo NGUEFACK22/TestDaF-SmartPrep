@@ -35,6 +35,8 @@
         <p class="mt-6 text-sm text-slate-500">
             Pas encore de compte ?
             <a href="{{ route('register') }}" class="text-blue-600 hover:underline">Créer un compte</a>
+            <span class="mx-2">·</span>
+            <a href="{{ route('password.request') }}" class="text-blue-600 hover:underline">Mot de passe oublié ?</a>
         </p>
     </div>
 @endsection

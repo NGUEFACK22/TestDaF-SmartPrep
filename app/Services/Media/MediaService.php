@@ -126,6 +126,13 @@ class MediaService
         if ($extension !== '' && ! in_array($extension, $config['extensions'], true)) {
             throw new ExamException('Extension de fichier non autorisée.', 422);
         }
+
+        // Vérifie le MIME réel (pas seulement l'extension) contre la liste
+        // autorisée — bloque les faux .mp3 contenant du PHP/HTML.
+        $mime = (string) ($file->getMimeType() ?: $file->getClientMimeType());
+        if ($mime !== '' && ! in_array($mime, $config['mimes'] ?? [], true)) {
+            throw new ExamException("Type de fichier non autorisé ({$mime}).", 422);
+        }
     }
 
     private function safeExtension(UploadedFile $file, string $kind): string

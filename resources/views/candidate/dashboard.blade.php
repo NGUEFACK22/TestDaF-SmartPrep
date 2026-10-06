@@ -43,6 +43,26 @@
         </div>
     @endif
 
+    @if (($eliteUnlocks ?? collect())->isNotEmpty() || ($eliteActive ?? null))
+        <div class="mt-6 rounded-2xl border border-violet-300 bg-gradient-to-r from-violet-50 to-fuchsia-50 p-5 flex items-center justify-between flex-wrap gap-3">
+            <div>
+                <div class="font-semibold text-violet-900">🏆 Espace Élite débloqué — 2 scores parfaits d'affilée !</div>
+                <div class="text-sm text-violet-800">
+                    @if ($eliteActive && $eliteActive->status === 'ready')
+                        Vos QCM inédits sont prêts. À vous de jouer.
+                    @elseif ($eliteActive)
+                        Génération de vos QCM en cours…
+                    @else
+                        L'IA génère des QCM inédits calibrés sur vos faiblesses (min 20, chrono par question).
+                    @endif
+                </div>
+            </div>
+            <a href="{{ route('challenges.index') }}" class="rounded-lg bg-violet-600 text-white px-4 py-2 font-medium hover:bg-violet-700">
+                Ouvrir l'Espace Élite
+            </a>
+        </div>
+    @endif
+
     <div class="grid md:grid-cols-4 gap-4 mt-6">
         @foreach ($skillProgress as $key => $skill)
             <div class="bg-white border border-slate-200 rounded-2xl p-5">

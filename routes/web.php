@@ -31,14 +31,36 @@ Route::get('/', function () {
 // ------------------------------------------------------------------ Invités
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'show'])->name('login');
-    Route::post('/login', [LoginController::class, 'login'])->name('login.attempt');
+    Route::post('/login', [LoginController::class, 'login'])
+        ->middleware('throttle:5,1')
+        ->name('login.attempt');
     Route::get('/register', [RegisterController::class, 'show'])->name('register');
-    Route::post('/register', [RegisterController::class, 'register'])->name('register.store');
+    Route::post('/register', [RegisterController::class, 'register'])
+        ->middleware('throttle:5,1')
+        ->name('register.store');
+
+    // Mot de passe oublié (broker Laravel, table password_reset_tokens).
+    Route::get('/forgot-password', [App\Http\Controllers\Auth\PasswordResetController::class, 'requestForm'])
+        ->middleware('throttle:5,1')
+        ->name('password.request');
+    Route::post('/forgot-password', [App\Http\Controllers\Auth\PasswordResetController::class, 'sendLink'])
+        ->middleware('throttle:5,1')
+        ->name('password.email');
+    Route::get('/reset-password/{token}', [App\Http\Controllers\Auth\PasswordResetController::class, 'resetForm'])
+        ->name('password.reset');
+    Route::post('/reset-password', [App\Http\Controllers\Auth\PasswordResetController::class, 'reset'])
+        ->middleware('throttle:5,1')
+        ->name('password.update');
 });
 
 Route::post('/logout', [LoginController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
+
+// Santé publique (uptime/monitoring) : sans données sensibles, throttle anti-abus.
+Route::get('/health', [App\Http\Controllers\HealthController::class, 'check'])
+    ->middleware('throttle:30,1')
+    ->name('health');
 
 // -------------------------------------------------------------- Authentifié
 Route::middleware('auth')->group(function () {
@@ -62,10 +84,27 @@ Route::middleware('auth')->group(function () {
     Route::post('/exam/{attempt}/exercises/{attemptExercise}/next', [ExamController::class, 'next'])
         ->name('exam.next');
     Route::get('/exam/{attempt}/timer', [ExamController::class, 'timer'])->name('exam.timer');
+    Route::post('/exam/{attempt}/event', [ExamController::class, 'event'])
+        ->middleware('throttle:60,1')
+        ->name('exam.event');
 
     // Résultats
     Route::get('/results/{attempt}', [ResultController::class, 'show'])->name('results.show');
     Route::get('/results/{attempt}/report', [ResultController::class, 'report'])->name('results.report');
+    Route::get('/results/{attempt}/pdf', [ResultController::class, 'pdf'])->name('results.pdf');
+
+    // Espace Élite — Défi IA (2 scores parfaits consécutifs requis).
+    Route::get('/challenges', [App\Http\Controllers\Candidate\ChallengeController::class, 'index'])->name('challenges.index');
+    Route::post('/challenges', [App\Http\Controllers\Candidate\ChallengeController::class, 'store'])
+        ->middleware('throttle:5,1')
+        ->name('challenges.store');
+    Route::get('/challenges/{challenge}/play', [App\Http\Controllers\Candidate\ChallengeController::class, 'play'])->name('challenges.play');
+    Route::get('/challenges/{challenge}/status', [App\Http\Controllers\Candidate\ChallengeController::class, 'status'])->name('challenges.status');
+
+    // Compte RGPD : export + suppression.
+    Route::get('/account', [App\Http\Controllers\Candidate\AccountController::class, 'show'])->name('account.show');
+    Route::get('/account/export', [App\Http\Controllers\Candidate\AccountController::class, 'export'])->name('account.export');
+    Route::delete('/account', [App\Http\Controllers\Candidate\AccountController::class, 'destroy'])->name('account.destroy');
 
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');

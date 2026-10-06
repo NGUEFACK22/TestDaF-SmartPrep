@@ -42,6 +42,12 @@ class TrainingController extends Controller
 
         $exercise->load('questions.answerOptions', 'solutions', 'media');
 
+        // Brassage des réponses à chaque affichage : l'ordre change à chaque
+        // visite (les libellés voyagent avec leur texte, la correction suit).
+        foreach ($exercise->questions as $question) {
+            $question->setRelation('answerOptions', $question->answerOptions->shuffle()->values());
+        }
+
         return view('candidate.training.show', [
             'exercise' => $exercise,
         ]);

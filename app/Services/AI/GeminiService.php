@@ -20,10 +20,24 @@ class GeminiService
     }
 
     /**
+     * Génère du JSON structuré (QCM inédits, etc.), ou null en cas d'échec.
+     * Température élevée par défaut pour varier les questions à chaque appel.
+     */
+    public function generateJson(string $prompt, string $systemInstruction = '', float $temperature = 0.7): ?array
+    {
+        return $this->call($prompt, $systemInstruction, $temperature);
+    }
+
+    /**
      * Analyse un texte et retourne un résultat JSON structuré, ou null en cas
      * d'échec (l'appelant gère alors le repli « Analyse en attente »).
      */
     public function evaluateText(string $prompt, string $systemInstruction = ''): ?array
+    {
+        return $this->call($prompt, $systemInstruction, 0.2);
+    }
+
+    private function call(string $prompt, string $systemInstruction, float $temperature): ?array
     {
         if (! $this->enabled()) {
             return null;
@@ -40,7 +54,7 @@ class GeminiService
             ],
             'generationConfig' => [
                 'responseMimeType' => 'application/json',
-                'temperature' => 0.2,
+                'temperature' => $temperature,
             ],
         ];
 

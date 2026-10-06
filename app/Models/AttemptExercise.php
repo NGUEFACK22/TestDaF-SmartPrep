@@ -12,6 +12,9 @@ class AttemptExercise extends Model
 {
     use HasFactory;
 
+    /** Mémoïsation du pool de questions (évite N requêtes par page d'examen). */
+    protected ?\Illuminate\Support\Collection $memoFormQuestions = null;
+
     protected $fillable = [
         'attempt_id', 'exercise_id', 'section_id', 'position', 'status',
         'started_at', 'expires_at', 'completed_at', 'time_spent',
@@ -133,19 +136,37 @@ class AttemptExercise extends Model
         return array_values(array_map('intval', (array) $form));
     }
 
-    /** Questions actives pour cette tentative, dans l'ordre du pool. */
+    /** Questions actives pour cette tentative, dans l'ordre du pool (mémoïsé). */
     public function formQuestions(): \Illuminate\Support\Collection
     {
-        $ids = $this->formIds();
-        $pool = $this->exercise->questions()->orderBy('position')->get();
-
-        if ($ids === null) {
-            return $pool;
+        if ($this->memoFormQuestions !== null) {
+            return $this->memoFormQuestions;
         }
 
-        return $pool
-            ->filter(fn ($q) => in_array((int) $q->getKey(), $ids, true))
+        $ids = $this->formIds();
+
+        // Réutilise la relation déjà chargée si possible (évite 5-10 requêtes).
+        if ($this->relationLoaded('exercise') && $this->exercise->relationLoaded('questions')) {
+            $pool = $this->exercise->questions->sortBy('position')->values();
+        } else {
+            $pool = $this->exercise->questions()->orderBy('position')->get();
+        }
+
+        if ($ids === null) {
+            return $this->memoFormQuestions = $pool->values();
+        }
+
+        $idSet = array_flip($ids);
+
+        return $this->memoFormQuestions = $pool
+            ->filter(fn ($q) => isset($idSet[(int) $q->getKey()]))
             ->values();
+    }
+
+    /** Invalide le cache mémoire (après changement de forme). */
+    public function flushFormCache(): void
+    {
+        $this->memoFormQuestions = null;
     }
 
     // ------------------------------------------------- timer par question

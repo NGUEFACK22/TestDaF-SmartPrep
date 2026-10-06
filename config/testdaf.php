@@ -161,6 +161,29 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Espace Élite — Défi IA (QCM générés après 2 scores parfaits consécutifs)
+    |--------------------------------------------------------------------------
+    | L'IA régénère à chaque demande une partie inédite (jamais les mêmes
+    | questions), calibrée sur les faiblesses analysées, dans le cadre TestDaF.
+    */
+    'challenge' => [
+        // 2 tentatives terminées à 100 % d'affilée sur le même test.
+        'consecutive_perfect' => 2,
+        // Minimum absolu de questions générées par défi.
+        'min_questions' => 20,
+        // Numéros réservés aux tests générés (invisibles de la liste publique).
+        'test_number_base' => 900,
+        // Minuteur PAR QUESTION selon la difficulté (secondes, autorité serveur).
+        'time_by_difficulty' => [
+            'B2' => 90,
+            'C1' => 120,
+            'C1+' => 150,
+        ],
+        'default_difficulty' => 'C1',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Libellés compétences
     |--------------------------------------------------------------------------
     */

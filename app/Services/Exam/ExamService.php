@@ -15,6 +15,7 @@ use App\Models\ModellTest;
 use App\Models\SpeakingSubmission;
 use App\Models\User;
 use App\Models\WritingSubmission;
+use App\Services\Statistics\StatisticsService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -243,18 +244,41 @@ class ExamService
             ];
         }
 
+        // Anti-passage accidentel : détecte si la question quittée est sans
+        // réponse (vide = 0 point). Le serveur autorise le passage (un vrai
+        // examen note 0 les blancs) mais le signale : le client affiche un
+        // avertissement et journalise question_skipped pour l'audit.
+        $leavingQuestion = $attemptExercise->currentQuestion();
+        $skipped = $leavingQuestion
+            && ! $attempt->answers()->where('question_id', $leavingQuestion->id)->exists()
+            && ! $attemptExercise->currentQuestionExpired();
+
         $advanced = $this->questions->advance($attemptExercise);
 
         if (! $advanced) {
+            if ($skipped) {
+                $this->log($attempt, 'question_skipped', [
+                    'exercise_id' => $attemptExercise->exercise_id,
+                    'question_id' => $leavingQuestion->id,
+                ]);
+            }
             $this->completeExercise($attempt, $attemptExercise->exercise_id);
 
-            return $this->afterExerciseClosed($attempt, $attemptExercise->fresh());
+            return $this->afterExerciseClosed($attempt, $attemptExercise->fresh()) + ['skipped' => (bool) $skipped];
+        }
+
+        if ($skipped) {
+            $this->log($attempt, 'question_skipped', [
+                'exercise_id' => $attemptExercise->exercise_id,
+                'question_id' => $leavingQuestion->id,
+            ]);
         }
 
         $attemptExercise = $attemptExercise->fresh();
 
         return [
             'outcome' => 'advanced',
+            'skipped' => (bool) $skipped,
             'question' => $this->questionPayload($attemptExercise),
             'timer' => $this->timer->display($attemptExercise),
             'question_timer' => $this->questions->display($attemptExercise),
@@ -304,7 +328,60 @@ class ExamService
         ];
     }
 
-    /** Question courante sérialisée pour le frontend. */
+    /**
+     * Options affichées dans un ordre brassé.
+     *
+     * Le brassage est DÉTERMINISTE par graine : stable pendant toute la
+     * tentative (rechargements, resync) mais différent à chaque tentative.
+     * Les libellés voyagent avec leur texte (la correction compare les
+     * valeurs, jamais les positions) — anti-recopie sans toucher au score.
+     */
+    public function displayOptions(\App\Models\Question $question, string $seed): array
+    {
+        $question->loadMissing('answerOptions');
+
+        return $question->answerOptions
+            ->sortBy(fn ($o) => md5($seed.':'.$o->getKey()))
+            ->map(fn ($o) => [
+                'id' => $o->id,
+                'label' => $o->label,
+                'text' => $o->text,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /** Graine de brassage d'une question pour une tentative donnée. */
+    public static function attemptQuestionSeed(int $attemptId, int $questionId): string
+    {
+        return "attempt:{$attemptId}:q:{$questionId}";
+    }
+
+    /** Graine de brassage d'une question pour une tentative donnée. */
+    public function optionSeed(Attempt $attempt, \App\Models\Question $question): string
+    {
+        return self::attemptQuestionSeed((int) $attempt->id, (int) $question->getKey());
+    }
+
+    /**
+     * Applique le brassage aux options chargées (vue d'examen non chronométré) :
+     * même graine que questionPayload → ordre identique partout pendant la
+     * tentative.
+     */
+    public function applyOptionShuffle(iterable $questions, Attempt $attempt): void
+    {
+        foreach ($questions as $question) {
+            $question->loadMissing('answerOptions');
+            $question->setRelation(
+                'answerOptions',
+                $question->answerOptions
+                    ->sortBy(fn ($o) => md5($this->optionSeed($attempt, $question).':'.$o->getKey()))
+                    ->values()
+            );
+        }
+    }
+
+    /** Question courante sérialisée pour le frontend (options brassées). */
     public function questionPayload(AttemptExercise $attemptExercise): ?array
     {
         $question = $attemptExercise->currentQuestion();
@@ -312,8 +389,6 @@ class ExamService
         if (! $question) {
             return null;
         }
-
-        $question->loadMissing('answerOptions');
 
         return [
             'id' => $question->id,
@@ -324,11 +399,12 @@ class ExamService
                 ? (int) $question->time_limit_seconds
                 : null,
             'data' => $question->data,
-            'answer_options' => $question->answerOptions->map(fn ($o) => [
-                'id' => $o->id,
-                'label' => $o->label,
-                'text' => $o->text,
-            ])->values()->all(),
+            // Graine = attempt_id (colonne, zéro requête) : stable pendant
+            // la tentative, différente à chaque tentative.
+            'answer_options' => $this->displayOptions(
+                $question,
+                self::attemptQuestionSeed((int) $attemptExercise->attempt_id, (int) $question->getKey())
+            ),
         ];
     }
 
@@ -375,15 +451,44 @@ class ExamService
             'current_exercise_id' => null,
         ]);
 
+        // Les stats dashboard étaient en cache : on les invalide pour que
+        // la progression / l'évolution reflètent immédiatement ce test.
+        StatisticsService::flushUserCache((int) $attempt->user_id);
+
+        // Recommandations : le dashboard les lit, il faut les générer ici.
+        // Isolé en try/catch : une reco en échec ne doit jamais bloquer
+        // la clôture d'une tentative.
+        try {
+            app(\App\Services\Statistics\RecommendationService::class)
+                ->generateFor($attempt->user ?? $attempt->load('user')->user);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        // Espace Élite : 2 scores parfaits consécutifs → unlock + notif.
+        // Les tests générés (draft) ne redébloquent jamais (voir service).
+        try {
+            app(\App\Services\Challenge\ChallengeService::class)
+                ->checkAndUnlock($attempt);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         $this->log($attempt, 'attempt_completed', ['score' => (float) $attempt->score]);
     }
 
-    /** Progression globale d'une tentative. */
+    /** Progression globale d'une tentative (2 COUNT, pas de full load). */
     public function progress(Attempt $attempt): array
     {
-        $attempt->loadMissing('attemptExercises');
-        $total = $attempt->attemptExercises->count();
-        $done = $attempt->attemptExercises->filter(fn ($ae) => $ae->state()->isFinal())->count();
+        if ($attempt->relationLoaded('attemptExercises')) {
+            $total = $attempt->attemptExercises->count();
+            $done = $attempt->attemptExercises->filter(fn ($ae) => $ae->state()->isFinal())->count();
+        } else {
+            $total = $attempt->attemptExercises()->count();
+            $done = $attempt->attemptExercises()
+                ->whereIn('status', ['completed', 'expired'])
+                ->count();
+        }
 
         return [
             'total' => $total,

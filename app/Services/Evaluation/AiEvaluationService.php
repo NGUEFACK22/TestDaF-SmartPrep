@@ -47,6 +47,26 @@ class AiEvaluationService
         ]);
     }
 
+    /** Quota journalier (Setting admin, défaut .env MAX_AI_REQUESTS). 0 = bloqué. */
+    public function quotaLimit(): int
+    {
+        try {
+            return (int) \App\Models\Setting::get('max_ai_requests', config('testdaf.ai.max_requests', 100));
+        } catch (\Throwable) {
+            return (int) config('testdaf.ai.max_requests', 100);
+        }
+    }
+
+    public function dailyUsage(): int
+    {
+        return AiEvaluation::where('requested_at', '>=', now()->startOfDay())->count();
+    }
+
+    public function quotaExceeded(): bool
+    {
+        return $this->dailyUsage() >= $this->quotaLimit();
+    }
+
     /** Évalue un texte via le fournisseur LLM et enregistre le JSON structuré. */
     public function evaluateText(AiEvaluation $evaluation, string $prompt, string $system = ''): AiEvaluation
     {
@@ -58,6 +78,14 @@ class AiEvaluationService
             ]);
 
             return $evaluation;
+        }
+
+        // Quota enforced : protège la facture Gemini, retry possible demain.
+        if ($this->quotaExceeded()) {
+            return $this->markFailed(
+                $evaluation,
+                "Quota IA journalier atteint ({$this->dailyUsage()}/{$this->quotaLimit()}). Nouvelle tentative demain ou demandez à l'administrateur d'augmenter max_ai_requests."
+            );
         }
 
         $evaluation->update(['status' => 'processing']);

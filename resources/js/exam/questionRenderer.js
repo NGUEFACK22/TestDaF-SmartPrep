@@ -4,18 +4,68 @@
  * Une seule fabrique gère tous les types (aucune page séparée par type).
  * `question.type` détermine l'interface ; `read()` renvoie la réponse normalisée.
  */
-export function renderQuestion(question, existing = null) {
+const TYPE_HINTS = {
+    single_choice: 'Une seule réponse possible.',
+    true_false: 'Vrai ou Faux.',
+    multiple_choice: 'Une ou plusieurs réponses possibles.',
+    fill_blank: 'Un mot par case, dans l’ordre des vides du texte.',
+    short_answer: 'Réponse courte (un ou deux mots suffisent).',
+    text_input: 'Réponse libre dans le champ.',
+    ordering: 'Ordre à reconstituer (glisser-déposer).',
+    matching: 'Une correspondance par ligne.',
+    pair_assignment: 'Une correspondance par ligne.',
+    category_assignment: 'Une catégorie par élément.',
+};
+
+export function typeHint(type) {
+    return TYPE_HINTS[type] || 'Répondez puis validez pour continuer.';
+}
+
+export function renderQuestion(question, existing = null, meta = {}) {
     const el = document.createElement('div');
     el.className = 'question-block rounded-lg border border-slate-200 bg-white p-4 mb-4';
     el.dataset.questionId = question.id;
     el.dataset.questionType = question.type;
 
+    // Numérotation normale : "Frage 1 / 3" + points + type. Sans numéro,
+    // le candidat ne sait pas où il est ni ce qu'on attend de lui.
+    const index = Number(meta.index ?? 0);
+    const total = Number(meta.total ?? 0);
+    const head = document.createElement('div');
+    head.className = 'flex items-center justify-between gap-2 mb-2 text-xs';
+    const num = document.createElement('span');
+    num.className = 'inline-block rounded-full bg-slate-900 text-white font-semibold px-2.5 py-0.5';
+    num.dataset.role = 'question-number';
+    num.textContent = total > 0 ? `Frage ${index + 1} / ${total}` : `Frage ${index + 1}`;
+    head.appendChild(num);
+    const right = document.createElement('span');
+    right.className = 'flex items-center gap-2';
+    const pts = document.createElement('span');
+    pts.className = 'text-slate-400';
+    const pv = Number(question.points ?? 0);
+    pts.textContent = pv > 0 ? `${pv} Pt${pv > 1 ? 's' : ''}` : '';
+    right.appendChild(pts);
+    // Badge d'état : le SEUL retour fiable "répondu / en attente".
+    const status = document.createElement('span');
+    status.dataset.role = 'answer-status';
+    status.className = 'rounded-full bg-slate-100 text-slate-500 px-2.5 py-0.5 font-medium';
+    status.textContent = '· En attente';
+    right.appendChild(status);
+    head.appendChild(right);
+    el.appendChild(head);
+
     if (question.prompt) {
         const p = document.createElement('p');
-        p.className = 'font-medium text-slate-800 mb-3';
+        p.className = 'font-medium text-slate-800 mb-1';
         p.textContent = question.prompt;
         el.appendChild(p);
     }
+
+    // Aide discrète (grise) : ne doit jamais ressembler à un message d'erreur.
+    const hint = document.createElement('p');
+    hint.className = 'text-xs text-slate-400 mb-3';
+    hint.textContent = 'Aide : ' + typeHint(question.type);
+    el.appendChild(hint);
 
     const body = document.createElement('div');
     el.appendChild(body);

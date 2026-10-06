@@ -83,6 +83,19 @@ class Attempt extends Model
      */
     public function currentExercise(): ?AttemptExercise
     {
+        // Relation déjà chargée : aucun SQL supplémentaire.
+        if ($this->relationLoaded('attemptExercises')) {
+            if ($this->current_exercise_id) {
+                $ae = $this->attemptExercises
+                    ->firstWhere('exercise_id', $this->current_exercise_id);
+                if ($ae && ! $ae->state()->isFinal()) {
+                    return $ae;
+                }
+            }
+
+            return $this->attemptExercises->first(fn ($ae) => ! $ae->state()->isFinal());
+        }
+
         if ($this->current_exercise_id) {
             $ae = $this->attemptExercises()
                 ->where('exercise_id', $this->current_exercise_id)
@@ -93,9 +106,15 @@ class Attempt extends Model
             }
         }
 
-        return $this->attemptExercises()
-            ->get()
-            ->first(fn ($ae) => ! $ae->state()->isFinal());
+        // Balaye par position croissante, stoppe à la première non finale
+        // (index attempt_id+position existant, pas de full-scan applicatif).
+        foreach ($this->attemptExercises()->orderBy('position')->cursor() as $ae) {
+            if (! $ae->state()->isFinal()) {
+                return $ae;
+            }
+        }
+
+        return null;
     }
 
     public function percentage(): float

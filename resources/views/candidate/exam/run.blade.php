@@ -40,6 +40,7 @@
             'writing' => route('api.writing.store', $attempt),
             'speaking' => route('api.speaking.store', $attempt),
             'timer' => route('exam.timer', $attempt),
+            'event' => route('exam.event', $attempt),
             'complete' => route('exam.complete', [$attempt, $attemptExercise]),
             'next' => route('exam.next', [$attempt, $attemptExercise]),
             // Fallback de sécurité : la page d'examen (le serveur décide ;
@@ -67,19 +68,19 @@
 <header class="bg-slate-900 text-white sticky top-0 z-10">
     <div class="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between gap-4">
         <div class="flex items-center gap-4">
-            <span class="font-bold tracking-wide">TESTDAF</span>
+            <span class="font-bold tracking-wide">SYNPHONIE</span>
             <span class="text-slate-300">·</span>
             <span class="font-medium">{{ $skill->label() }}</span>
             <span class="text-slate-400 text-sm">Aufgabe {{ $indexInSection + 1 }} von {{ $sectionCount }}</span>
         </div>
-        @if ($timed)
-            <div class="text-right hidden sm:block">
-                <div class="text-xs text-slate-400">
-                    Frage <span id="question-progress" class="font-mono text-slate-200">{{ $currentQuestionIndex + 1 }} / {{ $totalQuestions }}</span>
-                </div>
-                <div class="font-mono text-xl" data-question-timer-label>--:--</div>
+        <div class="text-right hidden sm:block">
+            <div class="text-xs text-slate-400">
+                Frage <span id="question-progress" class="font-mono text-slate-200">{{ $currentQuestionIndex + 1 }} / {{ $totalQuestions }}</span>
             </div>
-        @endif
+            @if ($timed)
+                <div class="font-mono text-xl" data-question-timer-label>--:--</div>
+            @endif
+        </div>
         <div class="text-right">
             <div class="text-xs text-slate-400">Temps restant</div>
             <div class="font-mono text-xl" data-timer-label>{{ Format::clock($timer['remaining_seconds']) }}</div>
@@ -100,16 +101,44 @@
         Die Bearbeitungszeit ist abgelaufen.
     </div>
 
-    <div class="flex items-center justify-between mb-4 text-sm text-slate-500">
+    <div class="flex items-center justify-between mb-2 text-sm text-slate-500">
         <span>Tentative #{{ $attempt->id }} — {{ $attempt->modellTest?->title }}</span>
         <span id="save-state">Prêt</span>
     </div>
+
+    @php
+        $done = (int) ($progress['completed'] ?? 0);
+        $total = max(1, (int) ($progress['total'] ?? 1));
+        $step = min($total, $done + 1);
+        $pct = $total > 0 ? round(($done / $total) * 100) : 0;
+    @endphp
+    <div class="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-2.5">
+        <div class="flex items-center justify-between text-xs text-slate-500 mb-1.5">
+            <span>Étape {{ $step }} / {{ $total }} du Modelltest</span>
+            <span>{{ $done }} tâche(s) terminée(s)</span>
+        </div>
+        <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
+            <div class="h-full rounded-full bg-blue-600 transition-all" style="width: {{ $pct }}%"></div>
+        </div>
+    </div>
+
+    <div id="answer-warning" class="hidden mb-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 font-medium"></div>
 
     <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 mb-4">
         <h1 class="font-semibold">{{ $exercise->title }}</h1>
         @if ($exercise->instruction)
             <p class="text-sm text-slate-600 mt-2 whitespace-pre-line">{{ $exercise->instruction }}</p>
         @endif
+        @php
+            $howto = match ($skill->value) {
+                'lesen' => '📖 1. Lisez le texte ci-dessous. 2. Répondez à chaque Frage (n° bleu). 3. Cliquez SUIVANT après chaque réponse — WEITER sur la dernière. Sans réponse = 0 point.',
+                'hoeren' => '🎧 1. Appuyez sur lecture de l’audio ci-dessous (écoutez jusqu’au bout). 2. Lisez la Frage et choisissez A / B / C. 3. Cliquez SUIVANT (WEITER sur la dernière). Le texte de l’audio est volontairement caché : c’est une vraie écoute.',
+                'schreiben' => '✍️ Écrivez votre texte dans le champ « Ihr Text », puis cliquez WEITER pour verrouiller. Sauvegarde auto toutes les 10 s.',
+                'sprechen' => '🎙️ 1. Attendez la préparation. 2. Parlez quand l’enregistrement démarre. 3. Réécoutez puis validez avec WEITER.',
+                default => 'Répondez à chaque Frage numérotée, puis validez.',
+            };
+        @endphp
+        <p class="text-xs text-blue-800 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mt-3">{{ $howto }}</p>
         @if ($skill === \App\Enums\Skill::Sprechen && isset(config('testdaf.sprechen.targets')[$exercise->type]))
             <p class="text-xs text-violet-700 bg-violet-50 rounded-lg px-3 py-1.5 mt-2 inline-block">
                 Objectif : ~{{ Format::clock(config('testdaf.sprechen.targets')[$exercise->type]) }} de parole
@@ -124,13 +153,18 @@
         @endif
         @foreach ($exercise->media as $media)
             @if ($media->type === 'audio')
-                <audio class="mt-4 w-full" controls preload="metadata" src="{{ route('media.stream', $media) }}"></audio>
+                <p class="text-xs text-slate-500 mt-4 mb-1">▶️ Écoutez le Hörtext en entier, puis répondez à la Frage ci-dessous :</p>
+                <audio class="w-full" controls preload="metadata" src="{{ route('media.stream', $media) }}"></audio>
             @elseif ($media->type === 'video')
-                <video class="mt-4 w-full rounded-xl" controls preload="metadata" src="{{ route('media.stream', $media) }}"></video>
+                <p class="text-xs text-slate-500 mt-4 mb-1">▶️ Regardez la vidéo en entier, puis répondez à la Frage ci-dessous :</p>
+                <video class="w-full rounded-xl" controls preload="metadata" src="{{ route('media.stream', $media) }}"></video>
             @elseif (in_array($media->type, ['image', 'graph']))
                 <img class="mt-4 max-h-96 rounded-xl" src="{{ route('media.stream', $media) }}" alt="Grafik">
             @endif
         @endforeach
+        @if ($skill->value === 'hoeren' && $exercise->media->whereIn('type', ['audio', 'video'])->isEmpty())
+            <p class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-4">⚠️ Aucun audio joint à cette tâche — lisez la Frage ci-dessous et répondez directement, puis cliquez SUIVANT.</p>
+        @endif
         @if (! empty($exercise->content['chart']))
             <div class="mt-4 bg-white border border-slate-200 rounded-xl p-4">
                 @if (! empty($exercise->content['chart']['title']))

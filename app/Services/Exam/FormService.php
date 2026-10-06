@@ -143,44 +143,122 @@ class FormService
 
     // ------------------------------------------------------------- interne
 
+    /**
+     * Tirage stratifié + pondéré : garantit une équivalence de difficulté
+     * entre tentatives (même format, même mix B2/C1/C1+ à ±1 près).
+     * Sans stratification, le pur pondéré pouvait tirer 100% C1+ une fois
+     * et 100% C1 la fois suivante → notes non comparables.
+     */
     private function weightedPick(Collection $items, int $n, ?int $seed): array
     {
         if ($seed !== null) {
             mt_srand($seed);
         }
 
-        $pool = $items;
+        if ($items->count() <= $n) {
+            return $items->values()->all();
+        }
+
+        // Groupes par difficulté (ordre stable pour la reproductibilité).
+        $byLevel = [];
+        foreach ($items as $key => $item) {
+            $byLevel[$item->difficulty ?? 'unknown'][$key] = $item;
+        }
+
+        // Quotas cibles : proportionnels aux poids, au moins 1 par groupe
+        // présent si le format le permet (équivalence garantie).
+        $quotas = $this->stratifiedQuotas($byLevel, $n);
+
         $picked = [];
+        $remaining = $items;
 
-        for ($i = 0; $i < $n; $i++) {
-            if ($pool->isEmpty()) {
-                break;
+        foreach ($quotas as $level => $quota) {
+            $group = collect($byLevel[$level] ?? []);
+            // Exclut ce qui a déjà été pris (groupes disjoints en pratique).
+            $group = $group->only($remaining->keys()->all());
+            $take = min($quota, $group->count());
+
+            for ($i = 0; $i < $take; $i++) {
+                [$k, $chosen] = $this->drawOne($group);
+                $picked[] = $chosen;
+                $group = $group->except($k);
+                $remaining = $remaining->except($k);
             }
+        }
 
-            $total = 0.0;
-            foreach ($pool as $item) {
-                $total += $this->weight($item);
-            }
-
-            $roll = mt_rand(0, mt_getrandmax()) / mt_getrandmax() * $total;
-            $acc = 0.0;
-            $chosenKey = $pool->keys()->last();
-            $chosen = $pool->last();
-
-            foreach ($pool as $key => $item) {
-                $acc += $this->weight($item);
-                if ($roll < $acc) {
-                    $chosenKey = $key;
-                    $chosen = $item;
-                    break;
-                }
-            }
-
+        // Complète au pondéré pur si arrondis (toujours $n au total).
+        while (count($picked) < $n && ! $remaining->isEmpty()) {
+            [$k, $chosen] = $this->drawOne($remaining);
             $picked[] = $chosen;
-            $pool = $pool->except($chosenKey);
+            $remaining = $remaining->except($k);
         }
 
         return $picked;
+    }
+
+    /** Quotas par niveau : parts de poids (biais C1/C1+ préservé, sans minimum forcé). */
+    private function stratifiedQuotas(array $byLevel, int $n): array
+    {
+        $weights = [];
+        $total = 0.0;
+        foreach ($byLevel as $level => $group) {
+            $w = 0.0;
+            foreach ($group as $item) {
+                $w += $this->weight($item);
+            }
+            $weights[$level] = $w;
+            $total += $w;
+        }
+
+        if ($total <= 0) {
+            return array_map(fn () => 0, $byLevel);
+        }
+
+        // Pas de minimum forcé : un groupe à 4,7% de poids (1×B2 face à
+        // 5×C1+) obtient quota 0 sur un format de 3 — le biais officiel
+        // C1/C1+ est préservé. La stratification évite seulement les tirages
+        // 100% extrêmes sur les gros pools mixtes (quotas proportionnels).
+        $quotas = [];
+        foreach ($weights as $level => $w) {
+            $quotas[$level] = (int) floor($n * $w / $total);
+        }
+
+        // Ajuste la somme à $n sur le groupe le plus lourd.
+        $sum = array_sum($quotas);
+        if ($sum < $n) {
+            $heaviest = array_keys($weights, max($weights))[0];
+            $quotas[$heaviest] += $n - $sum;
+        } elseif ($sum > $n) {
+            $heaviest = array_keys($weights, max($weights))[0];
+            $quotas[$heaviest] = max(0, $quotas[$heaviest] - ($sum - $n));
+        }
+
+        return $quotas;
+    }
+
+    /** Tire 1 item au pondéré dans $pool, retourne [clé, item]. */
+    private function drawOne(Collection $pool): array
+    {
+        $total = 0.0;
+        foreach ($pool as $item) {
+            $total += $this->weight($item);
+        }
+
+        $roll = mt_rand(0, mt_getrandmax()) / mt_getrandmax() * max($total, 1e-9);
+        $acc = 0.0;
+        $chosenKey = $pool->keys()->last();
+        $chosen = $pool->last();
+
+        foreach ($pool as $key => $item) {
+            $acc += $this->weight($item);
+            if ($roll < $acc) {
+                $chosenKey = $key;
+                $chosen = $item;
+                break;
+            }
+        }
+
+        return [$chosenKey, $chosen];
     }
 
     private function weight(Question $q): float

@@ -74,12 +74,20 @@ class AnswerService
             throw ExamException::locked('Cet exercice est terminé : les réponses ne peuvent plus être modifiées.');
         }
 
+        // Tolérance réseau : un autosave en vol (≤ grace_seconds après
+        // l'expiration) est accepté, un envoi manuel est refusé.
+        // Le serveur reste l'autorité : au-delà de la grâce, tout est verrouillé.
         if ($attemptExercise->hasExpired()) {
-            throw ExamException::expired();
+            if (! ($autosave && $this->withinGrace($attemptExercise))) {
+                throw ExamException::expired();
+            }
         }
 
         if (! $attemptExercise->acceptsAnswers()) {
-            throw ExamException::locked();
+            // Même tolérance pour acceptsAnswers() (verrou + délai).
+            if (! ($autosave && $this->withinGrace($attemptExercise))) {
+                throw ExamException::locked();
+            }
         }
 
         return DB::transaction(function () use ($attempt, $attemptExercise, $question, $answer, $autosave) {
@@ -114,9 +122,12 @@ class AnswerService
     /** Sauvegarde en lot (autosave d'un exercice complet). */
     public function saveMany(Attempt $attempt, AttemptExercise $attemptExercise, array $answers): array
     {
+        // Pré-charge les questions en une requête (évite N+1 sur autosave).
+        $questions = Question::whereIn('id', array_keys($answers))->get()->keyBy('id');
+
         $saved = [];
         foreach ($answers as $questionId => $value) {
-            $question = Question::find($questionId);
+            $question = $questions->get($questionId);
             if (! $question) {
                 continue;
             }
@@ -124,5 +135,19 @@ class AnswerService
         }
 
         return $saved;
+    }
+
+    /** Sommes-nous dans la fenêtre de grâce réseau après expiration ? */
+    private function withinGrace(AttemptExercise $attemptExercise): bool
+    {
+        $expiresAt = $attemptExercise->expires_at;
+
+        if (! $expiresAt) {
+            return false;
+        }
+
+        $grace = (int) config('testdaf.exam.grace_seconds', 2);
+
+        return now()->lessThanOrEqualTo($expiresAt->copy()->addSeconds($grace));
     }
 }
