@@ -10,12 +10,16 @@ use App\Models\Role;
 use App\Models\User;
 use App\Services\Exam\AnswerService;
 use App\Services\Exam\ExamService;
-use Database\Seeders\ModellTestSeeder;
+use Database\Seeders\LevelTrackSeeder;
 use Database\Seeders\RoleSeeder;
 use Database\Seeders\SettingSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
+/**
+ * Moteur d'examen sur les parcours QCM par niveau (100 % écrit).
+ * A1 (n°1) : 1 tâche, 4 QCM tirés de 8. B1 (n°3) : 2 tâches.
+ */
 class ExamEngineTest extends TestCase
 {
     use RefreshDatabase;
@@ -28,7 +32,7 @@ class ExamEngineTest extends TestCase
     {
         parent::setUp();
 
-        $this->seed([RoleSeeder::class, SettingSeeder::class, ModellTestSeeder::class]);
+        $this->seed([RoleSeeder::class, SettingSeeder::class, LevelTrackSeeder::class]);
 
         $role = Role::where('slug', 'candidate')->first();
         $this->user = User::factory()->create(['role_id' => $role->id]);
@@ -38,15 +42,15 @@ class ExamEngineTest extends TestCase
     public function test_start_attempt_creates_attempt_exercises_and_activates_first(): void
     {
         $response = $this->actingAs($this->user)
-            ->post(route('modelltests.start', $this->test));
+            ->post(route('preparation.start', 'A1'));
 
         $response->assertRedirect();
 
         $attempt = Attempt::where('user_id', $this->user->id)->first();
         $this->assertNotNull($attempt);
 
-        // 2 Aufgaben Lesen + 1 Hören + 1 Schreiben + 2 Sprechen = 6 tâches.
-        $this->assertSame(6, $attempt->attemptExercises()->count());
+        // Niveau A1 : 1 tâche QCM (forme 4/8).
+        $this->assertSame(1, $attempt->attemptExercises()->count());
 
         $first = $attempt->attemptExercises()->orderBy('position')->first();
         $this->assertSame(ExerciseState::Available, $first->state());
@@ -68,8 +72,9 @@ class ExamEngineTest extends TestCase
 
     public function test_cannot_access_future_exercise_directly(): void
     {
+        $b1 = ModellTest::where('number', 3)->firstOrFail();
         $engine = app(ExamService::class);
-        $attempt = $engine->startAttempt($this->user, $this->test);
+        $attempt = $engine->startAttempt($this->user, $b1);
 
         $ids = $attempt->attemptExercises()->orderBy('position')->pluck('exercise_id')->all();
         $this->assertGreaterThan(1, count($ids));
@@ -129,33 +134,17 @@ class ExamEngineTest extends TestCase
             ->save($attempt, $first, $question, ['A']);
     }
 
-    public function test_hoeren_exam_page_shows_audio_but_hides_the_transcript(): void
+    public function test_exam_page_shows_text_and_numbered_questions(): void
     {
-        $this->seed(\Database\Seeders\ModellTestMediaSeeder::class);
-
         $engine = app(ExamService::class);
         $attempt = $engine->startAttempt($this->user, $this->test);
-
-        // Franchit les 2 tâches Lesen pour arriver à la tâche Hören.
-        $tasks = $attempt->attemptExercises()->orderBy('position')->get();
-        foreach ($tasks->take(2) as $task) {
-            $engine->startExercise($attempt, $task->exercise_id);
-            $engine->completeExercise($attempt, $task->exercise_id);
-        }
-
-        $hoeren = $tasks->get(2);
-        $this->assertSame(\App\Enums\Skill::Hoeren, $hoeren->exercise->skill);
 
         $response = $this->actingAs($this->user)->get(route('exam.show', $attempt));
         $response->assertOk();
 
-        // L'audio (Hörtext) est proposé…
-        $response->assertSee('<audio', false);
-        $hoeren->refresh();
-        $this->assertSame(\App\Enums\ExerciseState::Started, $hoeren->state());
-
-        // …mais le transcript n'est PAS affiché : la tâche est une vraie écoute.
-        $response->assertDontSee('Hast du schon eine Wohnung in Heidelberg', false);
+        // Texte de lecture + aide, sans aucun lecteur audio.
+        $response->assertSee('Hallo! Ich heiße Anna', false);
+        $response->assertDontSee('<audio', false);
     }
 
     public function test_objective_scoring_counts_correct_answers(): void
@@ -175,7 +164,7 @@ class ExamEngineTest extends TestCase
         $engine->completeExercise($attempt, $ae->exercise_id);
 
         $ae->refresh();
-        $this->assertEqualsWithDelta(2.0, (float) $ae->score, 0.01);
-        $this->assertEqualsWithDelta(2.0, (float) $ae->max_score, 0.01);
+        $this->assertEqualsWithDelta(4.0, (float) $ae->score, 0.01);
+        $this->assertEqualsWithDelta(4.0, (float) $ae->max_score, 0.01);
     }
 }

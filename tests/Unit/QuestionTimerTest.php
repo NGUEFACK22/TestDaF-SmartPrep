@@ -182,32 +182,12 @@ class QuestionTimerTest extends TestCase
         $this->assertFalse($ae->currentQuestionExpired());
     }
 
-    public function test_productive_exercise_is_outside_the_question_timer(): void
+    public function test_lesen_exercise_is_never_productive(): void
     {
-        $writing = Exercise::create([
-            'skill' => Skill::Schreiben,
-            'type' => 'informationen_zusammenfassen',
-            'title' => 'Schreiben',
-            'duration_seconds' => 2400,
-            'points' => 20,
-            'position' => 0,
-            'status' => 'published',
-        ]);
-        $essay = Question::create([
-            'exercise_id' => $writing->id,
-            'type' => 'essay',
-            'position' => 0,
-            'prompt' => 'Text',
-            'points' => 20,
-        ]);
+        // Plateforme 100 % QCM écrit : plus aucune tâche productive.
+        $ae = $this->attemptExercise();
 
-        $ae = $this->attemptExercise([
-            'exercise_id' => $writing->id,
-            'question_form' => null,
-        ]);
-
-        $this->assertTrue($ae->isProductiveExercise());
-        $this->assertFalse($ae->currentQuestionExpired());
-        $this->assertTrue($ae->acceptsAnswerFor($essay));
+        $this->assertFalse($ae->isProductiveExercise());
+        $this->assertFalse(Skill::Lesen->isProductive());
     }
 }

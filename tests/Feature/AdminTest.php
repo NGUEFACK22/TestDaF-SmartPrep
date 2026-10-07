@@ -7,7 +7,7 @@ use App\Models\Role;
 use App\Models\Setting;
 use App\Models\User;
 use Database\Seeders\AdminUserSeeder;
-use Database\Seeders\ModellTestSeeder;
+use Database\Seeders\LevelTrackSeeder;
 use Database\Seeders\RoleSeeder;
 use Database\Seeders\SettingSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -26,7 +26,7 @@ class AdminTest extends TestCase
             RoleSeeder::class,
             AdminUserSeeder::class,
             SettingSeeder::class,
-            ModellTestSeeder::class,
+            LevelTrackSeeder::class,
         ]);
         $this->admin = User::where('email', 'admin@testdaf.local')->first();
     }
@@ -49,18 +49,19 @@ class AdminTest extends TestCase
         $this->assertSame(50, Setting::get('max_ai_requests'));
     }
 
-    public function test_admin_can_publish_modelltest(): void
+    public function test_admin_can_create_qcm_exercise(): void
     {
-        $test = ModellTest::where('number', 1)->first();
-
-        $this->actingAs($this->admin)->put(route('admin.modelltests.update', $test), [
-            'number' => 1,
-            'title' => 'Modelltest 1 — Mise à jour',
-            'difficulty' => 'B2',
-            'status' => 'published',
+        $this->actingAs($this->admin)->post(route('admin.exercises.store'), [
+            'skill' => 'lesen',
+            'type' => 'multiple_choice',
+            'title' => 'Exercice QCM A1',
+            'level' => 'A1',
+            'difficulty' => 'A1',
+            'duration_seconds' => 300,
+            'status' => 'draft',
         ])->assertRedirect();
 
-        $this->assertSame('published', $test->refresh()->status);
+        $this->assertDatabaseHas('exercises', ['title' => 'Exercice QCM A1', 'difficulty' => 'A1']);
     }
 
     public function test_candidate_cannot_access_admin_users(): void

@@ -5,7 +5,7 @@
 @section('content')
     @php
         use App\Support\Format;
-        $colors = ['lesen' => '#2563eb', 'hoeren' => '#0ea5e9', 'schreiben' => '#14b8a6', 'sprechen' => '#8b5cf6'];
+        $colors = ['lesen' => '#2563eb'];
         $evoDatasets = [];
         foreach (\App\Enums\Skill::sequence() as $s) {
             $evoDatasets[] = [
@@ -79,7 +79,7 @@
 
     <div class="mt-6 flex gap-3">
         <a href="{{ route('results.show', $attempt) }}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100">Retour aux résultats</a>
-        <a href="{{ route('modelltests.index') }}" class="rounded-lg bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700">Nouveau Modelltest</a>
+        <a href="{{ route('preparation.index') }}" class="rounded-lg bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700">Nouvelle session</a>
     </div>
 
     <p class="text-xs text-slate-400 mt-6">

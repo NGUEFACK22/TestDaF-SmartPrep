@@ -58,8 +58,11 @@ class HealthController extends Controller
     private function checkStorage(): bool
     {
         try {
-            return Storage::disk(config('testdaf.media.disk', 'local'))->exists('.')
-                || true; // le disque local existe toujours si le dossier est monté
+            // Plateforme 100 % QCM : aucun fichier stocké, on vérifie que le
+            // stockage Laravel (sessions, cache fichier) reste inscriptible.
+            Storage::disk('local')->put('health-ping.txt', 'pong');
+
+            return Storage::disk('local')->exists('health-ping.txt');
         } catch (\Throwable) {
             return false;
         }

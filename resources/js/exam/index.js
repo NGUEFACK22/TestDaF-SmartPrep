@@ -1,7 +1,5 @@
 import { ServerTimer, QuestionTimer } from './timer';
 import { renderQuestion } from './questionRenderer';
-import { initWriting } from './writing';
-import { initSpeaking } from './speaking';
 
 /**
  * Orchestrateur de la page d'examen.
@@ -316,10 +314,6 @@ function init(cfg) {
         blocks.forEach(({ el }) => lockBlock(el, null));
         warn('⏱ Temps écoulé pour cette tâche — vos dernières réponses sont sauvegardées, redirection…', true);
 
-        if (cfg.exercise.skill === 'sprechen' && window.__speakingStop) {
-            window.__speakingStop();
-        }
-
         await saveAll(true);
         await complete('expired');
     }
@@ -538,16 +532,7 @@ function init(cfg) {
             weiter.disabled = true;
             setState('Validation…');
 
-            if (cfg.exercise.skill === 'schreiben' && window.__writingSubmit) {
-                await window.__writingSubmit();
-            }
-
-            if (cfg.exercise.skill === 'sprechen' && window.__speakingSubmit) {
-                await window.__speakingSubmit();
-            } else {
-                await saveAll(false);
-            }
-
+            await saveAll(false);
             await complete('manual');
         });
     }
@@ -588,12 +573,4 @@ function init(cfg) {
         document.addEventListener('copy', () => sendEvent('copy'));
     }
 
-    // ------------------------------------------------ Modules spécifiques
-    if (cfg.exercise.skill === 'schreiben') {
-        initWriting(cfg, setState);
-    }
-
-    if (cfg.exercise.skill === 'sprechen') {
-        initSpeaking(cfg, timer, setState);
-    }
 }

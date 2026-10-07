@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Role;
 use App\Models\User;
-use Database\Seeders\ModellTestSeeder;
+use Database\Seeders\LevelTrackSeeder;
 use Database\Seeders\RoleSeeder;
 use Database\Seeders\SettingSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,7 +17,7 @@ class AuthTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed([RoleSeeder::class, SettingSeeder::class, ModellTestSeeder::class]);
+        $this->seed([RoleSeeder::class, SettingSeeder::class, LevelTrackSeeder::class]);
     }
 
     public function test_guest_can_register_and_becomes_candidate(): void

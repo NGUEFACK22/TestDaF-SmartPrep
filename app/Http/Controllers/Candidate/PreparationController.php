@@ -2,43 +2,41 @@
 
 namespace App\Http\Controllers\Candidate;
 
-use App\Enums\Difficulty;
-use App\Enums\Skill;
 use App\Http\Controllers\Controller;
 use App\Models\Attempt;
-use App\Models\Exercise;
 use App\Models\ModellTest;
 use App\Models\Result;
 use App\Models\User;
-use App\Models\UserAnswer;
 use App\Services\Exam\ExamService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Enum;
 
 /**
- * PreparationController — préparation par niveau (A1 → C2) et par compétence.
+ * PreparationController — entraînement QCM par niveau (A1 → C2).
  *
- * - index() : la page « Préparation » liste les niveaux CECRL ; le niveau C1
- *   lance directement le test de positionnement (2 parties : audio fixes +
- *   texte/QCM dynamique), B1/B2 renvoient vers les Modelltests complets.
- * - show()  : espaces d'entraînement par compétence (cours, méthodes,
- *   exercices par difficulté, progression).
+ * - index() : catalogue des niveaux (banques QCM A1–C1 + génération IA C1–C2).
+ * - startLevel() : session chronométrée sur banque (tirage sans remise).
+ * - generateLevel() : session IA inédite calibrée sur les faiblesses.
  */
 class PreparationController extends Controller
 {
     public function __construct(private ExamService $exam) {}
 
-    /** Niveaux disponibles sur la page Préparation. */
-    private const LEVELS = [
-        'A1' => 'Découvrir : bases de la langue (tests à venir).',
-        'A2' => 'Communication simple au quotidien (tests à venir).',
-        'B1' => 'S\'exprimer sur des sujets familiers — Modelltests complets disponibles.',
-        'B2' => 'Compréhension fine et argumentation — Modelltests complets disponibles.',
-        'C1' => 'Niveau cible du TestDaF : test de positionnement en 2 parties (Hören audio + Lesen QCM).',
-        'C2' => 'Bilingue / quasi natif (tests à venir).',
+    /** Niveaux disponibles sur la page Préparation (100 % QCM écrit). */
+    public const LEVELS = [
+        'A1' => 'Découvrir : QCM simples du quotidien, questions différentes à chaque session.',
+        'A2' => 'Communication simple : QCM du quotidien, questions différentes à chaque session.',
+        'B1' => 'S\'exprimer sur des sujets familiers — QCM + Lückentext par session.',
+        'B2' => 'Compréhension fine et implicite — QCM variés par session.',
+        'C1' => 'Niveau cible du TestDaF : QCM au format TestDaF + sessions IA inédites.',
+        'C2' => 'Quasi natif : sessions IA inédites générées à la demande.',
     ];
+
+    /** Niveaux avec banque de QCM (tirage sans remise à chaque session). */
+    public const BANK_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1'];
+
+    /** Niveaux avec génération IA inédite à la demande. */
+    public const AI_LEVELS = ['C1', 'C2'];
 
     /** Page Préparation : grille des niveaux, départ direct du test C1. */
     public function index(Request $request)
@@ -74,7 +72,7 @@ class PreparationController extends Controller
     public function startLevel(Request $request, string $level)
     {
         $level = strtoupper($level);
-        abort_unless(in_array($level, ['B1', 'B2', 'C1'], true), 404);
+        abort_unless(in_array($level, self::BANK_LEVELS, true), 404);
 
         $tests = ModellTest::published()
             ->where('difficulty', $level)
@@ -87,6 +85,27 @@ class PreparationController extends Controller
         $attempt = $this->exam->startAttempt($request->user(), $test);
 
         return redirect()->route('exam.show', $attempt);
+    }
+
+    /**
+     * Génère une session IA inédite pour un niveau (C1/C2) : QCM calibrés
+     * sur les faiblesses, cadre du niveau, minuteur par difficulté.
+     * Accès direct, sans condition de score (la génération file d'attente).
+     */
+    public function generateLevel(Request $request, string $level)
+    {
+        $level = strtoupper($level);
+        abort_unless(in_array($level, self::AI_LEVELS, true), 404);
+
+        try {
+            $challenge = app(\App\Services\Challenge\ChallengeService::class)
+                ->requestLevelGeneration($request->user(), $level);
+        } catch (\RuntimeException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('challenges.index')
+            ->with('status', "Session IA {$level} #{$challenge->id} lancée : QCM inédits en cours de génération.");
     }
 
     /**
@@ -144,57 +163,4 @@ class PreparationController extends Controller
         ];
     }
 
-    public function show(Request $request, string $skill)
-    {
-        validator(['skill' => $skill], ['skill' => [new Enum(Skill::class)]])->validate();
-
-        $user = $request->user();
-        $skillEnum = Skill::from($skill);
-
-        $byDifficulty = [];
-        foreach (Difficulty::cases() as $difficulty) {
-            $byDifficulty[$difficulty->value] = Exercise::published()
-                ->where('skill', $skill)
-                ->where('difficulty', $difficulty->value)
-                ->orderBy('position')
-                ->get();
-        }
-
-        $recentAnswers = UserAnswer::query()
-            ->where('user_answers.user_id', $user->id)
-            ->join('questions', 'questions.id', '=', 'user_answers.question_id')
-            ->join('exercises', 'exercises.id', '=', 'questions.exercise_id')
-            ->where('exercises.skill', $skill)
-            ->select('user_answers.is_correct')
-            ->latest('user_answers.id')
-            ->take(20)
-            ->get();
-
-        $successRate = $recentAnswers->isNotEmpty()
-            ? round(($recentAnswers->where('is_correct', true)->count() / $recentAnswers->count()) * 100, 1)
-            : null;
-
-        $skillResults = Result::query()
-            ->whereIn('attempt_id', $user->attempts()->pluck('id'))
-            ->where('skill', $skill)
-            ->latest('id')
-            ->get();
-
-        return view('candidate.preparation.show', [
-            'skill' => $skillEnum,
-            'byDifficulty' => $byDifficulty,
-            'successRate' => $successRate,
-            'skillResults' => $skillResults,
-            'courses' => config("testdaf.exercise_types.$skill", []),
-            'c1' => config("testdaf.c1.skill.$skill", []),
-            'c1Global' => [
-                'philosophy' => config('testdaf.c1.philosophy'),
-                'exam_rule' => config('testdaf.c1.exam_rule'),
-                'modes' => config('testdaf.c1.modes', []),
-                'progression' => config('testdaf.c1.progression', []),
-                'target' => config('testdaf.tdn.target'),
-            ],
-            'sprechTargets' => config('testdaf.sprechen.targets', []),
-        ]);
-    }
 }

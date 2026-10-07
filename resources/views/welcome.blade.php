@@ -6,9 +6,9 @@
     <div class="bg-gradient-to-br from-blue-600 to-blue-800 text-white rounded-3xl p-10 mt-4">
         <h1 class="text-3xl md:text-4xl font-bold mb-3">Préparez le TestDaF digital</h1>
         <p class="max-w-2xl text-blue-100 mb-8">
-            Une plateforme d'entraînement complète : Lesen, Hören, Schreiben, Sprechen — avec chronométrage
-            individuel par tâche, verrouillage séquentiel, correction automatique, analyse IA indicative et
-            statistiques de progression.
+            Une plateforme d'entraînement complète : des QCM d'allemand par niveau (A1 → C2),
+            avec chronométrage individuel, verrouillage séquentiel, correction automatique,
+            QCM inédits générés par IA et statistiques de progression.
         </p>
         <div class="flex flex-wrap gap-3">
             <a href="{{ route('register') }}" class="rounded-lg bg-white text-blue-700 px-5 py-2.5 font-medium hover:bg-blue-50">

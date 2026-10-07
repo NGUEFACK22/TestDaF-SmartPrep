@@ -12,8 +12,6 @@
             'skill' => $skill->value,
             'type' => $exercise->type,
             'title' => $exercise->title,
-            'preparation_seconds' => (int) $exercise->preparation_seconds,
-            'recording_seconds' => (int) $exercise->recording_seconds,
             'locked' => ! $attemptExercise->acceptsAnswers(),
         ],
         'questions' => $questions->map(fn ($q) => [
@@ -34,11 +32,8 @@
         'currentQuestionIndex' => (int) ($currentQuestionIndex ?? 0),
         'totalQuestions' => (int) ($totalQuestions ?? $questionCount),
         'autosaveInterval' => (int) config('testdaf.exam.autosave_interval', 10),
-        'writing' => $writing,
         'endpoints' => [
             'answers' => route('api.answers.store', $attempt),
-            'writing' => route('api.writing.store', $attempt),
-            'speaking' => route('api.speaking.store', $attempt),
             'timer' => route('exam.timer', $attempt),
             'event' => route('exam.event', $attempt),
             'complete' => route('exam.complete', [$attempt, $attemptExercise]),
@@ -129,101 +124,13 @@
         @if ($exercise->instruction)
             <p class="text-sm text-slate-600 mt-2 whitespace-pre-line">{{ $exercise->instruction }}</p>
         @endif
-        @php
-            $howto = match ($skill->value) {
-                'lesen' => '📖 1. Lisez le texte ci-dessous. 2. Répondez à chaque Frage (n° bleu). 3. Cliquez SUIVANT après chaque réponse — WEITER sur la dernière. Sans réponse = 0 point.',
-                'hoeren' => '🎧 1. Appuyez sur lecture de l’audio ci-dessous (écoutez jusqu’au bout). 2. Lisez la Frage et choisissez A / B / C. 3. Cliquez SUIVANT (WEITER sur la dernière). Le texte de l’audio est volontairement caché : c’est une vraie écoute.',
-                'schreiben' => '✍️ Écrivez votre texte dans le champ « Ihr Text », puis cliquez WEITER pour verrouiller. Sauvegarde auto toutes les 10 s.',
-                'sprechen' => '🎙️ 1. Attendez la préparation. 2. Parlez quand l’enregistrement démarre. 3. Réécoutez puis validez avec WEITER.',
-                default => 'Répondez à chaque Frage numérotée, puis validez.',
-            };
-        @endphp
-        <p class="text-xs text-blue-800 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mt-3">{{ $howto }}</p>
-        @if ($skill === \App\Enums\Skill::Sprechen && isset(config('testdaf.sprechen.targets')[$exercise->type]))
-            <p class="text-xs text-violet-700 bg-violet-50 rounded-lg px-3 py-1.5 mt-2 inline-block">
-                Objectif : ~{{ Format::clock(config('testdaf.sprechen.targets')[$exercise->type]) }} de parole
-                (+ {{ Format::clock(config('testdaf.sprechen.prep_seconds_default', 60)) }} de préparation)
-            </p>
-        @endif
+        <p class="text-xs text-blue-800 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mt-3">📖 1. Lisez le texte ci-dessous. 2. Répondez à chaque Frage (n° bleu). 3. Cliquez SUIVANT après chaque réponse — WEITER sur la dernière. Sans réponse = 0 point.</p>
         @if (! empty($exercise->content['text']))
             <div class="mt-4 bg-white border border-slate-200 rounded-xl p-4 text-sm leading-relaxed whitespace-pre-line">{{ $exercise->content['text'] }}</div>
         @endif
-        @if (! empty($exercise->content['source_text']))
-            <div class="mt-4 bg-white border border-slate-200 rounded-xl p-4 text-sm leading-relaxed whitespace-pre-line">{{ $exercise->content['source_text'] }}</div>
-        @endif
-        @foreach ($exercise->media as $media)
-            @if ($media->type === 'audio')
-                <p class="text-xs text-slate-500 mt-4 mb-1">▶️ Écoutez le Hörtext en entier, puis répondez à la Frage ci-dessous :</p>
-                <audio class="w-full" controls preload="metadata" src="{{ route('media.stream', $media) }}"></audio>
-            @elseif ($media->type === 'video')
-                <p class="text-xs text-slate-500 mt-4 mb-1">▶️ Regardez la vidéo en entier, puis répondez à la Frage ci-dessous :</p>
-                <video class="w-full rounded-xl" controls preload="metadata" src="{{ route('media.stream', $media) }}"></video>
-            @elseif (in_array($media->type, ['image', 'graph']))
-                <img class="mt-4 max-h-96 rounded-xl" src="{{ route('media.stream', $media) }}" alt="Grafik">
-            @endif
-        @endforeach
-        @if ($skill->value === 'hoeren' && $exercise->media->whereIn('type', ['audio', 'video'])->isEmpty())
-            <p class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-4">⚠️ Aucun audio joint à cette tâche — lisez la Frage ci-dessous et répondez directement, puis cliquez SUIVANT.</p>
-        @endif
-        @if (! empty($exercise->content['chart']))
-            <div class="mt-4 bg-white border border-slate-200 rounded-xl p-4">
-                @if (! empty($exercise->content['chart']['title']))
-                    <h3 class="text-sm font-semibold mb-1">{{ $exercise->content['chart']['title'] }}</h3>
-                @endif
-                <div class="relative h-56">
-                    <canvas data-chart="bar"
-                            data-series='@json(['labels' => $exercise->content['chart']['labels'] ?? [], 'values' => $exercise->content['chart']['values'] ?? []])'></canvas>
-                </div>
-            </div>
-        @endif
     </div>
 
-    {{-- ------------------------------------------------ Lesen / Hören --}}
-    @if (! $skill->isProductive())
-        <div id="questions-container"></div>
-    @endif
-
-    {{-- --------------------------------------------------------- Schreiben --}}
-    @if ($skill === \App\Enums\Skill::Schreiben)
-        <div class="bg-white border border-slate-200 rounded-2xl p-5">
-            <div class="flex items-center justify-between mb-2">
-                <h2 class="font-semibold">Ihr Text</h2>
-                <span class="text-sm text-slate-500">Wörter: <strong id="word-count">0</strong></span>
-            </div>
-            <textarea id="writing-editor" rows="16"
-                class="w-full rounded-xl border border-slate-300 p-4 text-sm leading-relaxed focus:border-blue-500 focus:ring-blue-500"
-                placeholder="Schreiben Sie hier Ihren Text…"></textarea>
-            <div id="writing-locked" class="hidden mt-2 text-sm text-red-600">
-                Le temps est écoulé : le texte ne peut plus être modifié.
-            </div>
-        </div>
-    @endif
-
-    {{-- --------------------------------------------------------- Sprechen --}}
-    @if ($skill === \App\Enums\Skill::Sprechen)
-        <div id="speaking-panel" class="bg-white border border-slate-200 rounded-2xl p-5">
-            <p id="speaking-error" class="hidden mb-3 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700"></p>
-            <p id="speaking-status" class="text-sm text-slate-500 mb-4"></p>
-
-            <div id="speaking-preparation" class="hidden text-center py-8">
-                <div class="text-sm text-slate-500">Vorbereitungszeit</div>
-                <div class="text-4xl font-bold text-blue-600" id="prep-countdown">--</div>
-            </div>
-
-            <div id="speaking-recording" class="text-center py-8">
-                <div class="text-sm text-slate-500">Aufnahme</div>
-                <div class="text-4xl font-bold text-red-600 recording-pulse">●</div>
-                <div class="text-sm text-slate-500 mt-2">Verbleibend: <span id="rec-countdown">--</span></div>
-            </div>
-
-            <div id="speaking-review" class="hidden">
-                <audio id="speaking-playback" class="w-full hidden" controls></audio>
-                <button type="button" id="btn-record-again" class="mt-3 rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100">
-                    Nouvel enregistrement
-                </button>
-            </div>
-        </div>
-    @endif
+    <div id="questions-container"></div>
 
     <div class="flex justify-stretch sm:justify-end mt-6">
         <button type="button" id="btn-weiter"

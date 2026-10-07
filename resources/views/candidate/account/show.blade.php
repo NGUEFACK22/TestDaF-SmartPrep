@@ -15,7 +15,7 @@
 
         <div class="bg-white border border-red-200 rounded-2xl p-5">
             <h2 class="font-semibold mb-2 text-red-700">Supprimer mon compte</h2>
-            <p class="text-sm text-slate-500 mb-4">Définitif : tentatives, réponses, enregistrements audio/vidéo et fichiers privés sont effacés. Cette action est irréversible.</p>
+            <p class="text-sm text-slate-500 mb-4">Définitif : tentatives, réponses et recommandations sont effacés. Cette action est irréversible.</p>
             <form method="POST" action="{{ route('account.destroy') }}" class="space-y-3" onsubmit="return confirm('Supprimer définitivement votre compte et toutes vos données ?');">
                 @csrf
                 @method('DELETE')

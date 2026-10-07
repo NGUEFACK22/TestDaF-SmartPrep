@@ -8,7 +8,6 @@ use App\Exceptions\ExamException;
 use App\Http\Controllers\Controller;
 use App\Models\Attempt;
 use App\Models\AttemptExercise;
-use App\Models\WritingSubmission;
 use App\Services\Exam\ExamService;
 use App\Services\Exam\QuestionTimerService;
 use App\Services\Exam\TimerService;
@@ -190,7 +189,6 @@ class ExamController extends Controller
         $questions->load('answerOptions');
         // Brassage des réponses : même ordre que le JSON (même graine).
         $this->exam->applyOptionShuffle($questions, $attempt);
-        $attemptExercise->exercise->loadMissing('media');
 
         // Timer par question : le client ne reçoit que la question en cours
         // (les questions futures restent côté serveur).
@@ -206,22 +204,6 @@ class ExamController extends Controller
             ->mapWithKeys(fn ($a) => [$a->question_id => $a->decoded()]);
 
         $progress = $this->exam->progress($attempt);
-
-        // Soumission Schreiben existante (reprise après coupure).
-        $writing = null;
-        if ($attemptExercise->exercise->skill === Skill::Schreiben) {
-            $existing = WritingSubmission::query()
-                ->where('attempt_id', $attempt->id)
-                ->where('attempt_exercise_id', $attemptExercise->id)
-                ->first();
-            if ($existing) {
-                $writing = [
-                    'content' => (string) $existing->content,
-                    'word_count' => (int) $existing->word_count,
-                    'locked' => (bool) $existing->locked,
-                ];
-            }
-        }
 
         // Position de la tâche au sein de sa section.
         $sectionExercises = $attempt->attemptExercises()
@@ -246,7 +228,6 @@ class ExamController extends Controller
             'indexInSection' => $indexInSection === false ? 0 : $indexInSection,
             'sectionCount' => $sectionExercises->count(),
             'skillSequence' => Skill::sequence(),
-            'writing' => $writing,
         ]);
     }
 }

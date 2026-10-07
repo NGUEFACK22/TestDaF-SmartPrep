@@ -75,11 +75,7 @@ class RecommendationService
 
     private function skillForQuestionType(string $questionType): ?Skill
     {
-        // La plupart des types objectifs relèvent de Lesen/Hören.
-        return match ($questionType) {
-            'audio_response' => Skill::Sprechen,
-            'essay', 'text_input' => Skill::Schreiben,
-            default => Skill::Lesen,
-        };
+        // Plateforme 100 % QCM écrit : tout relève de Lesen.
+        return Skill::Lesen;
     }
 }

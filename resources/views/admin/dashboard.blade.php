@@ -6,32 +6,32 @@
     @php use App\Support\Format; @endphp
 
     <h1 class="text-2xl font-bold">Administration</h1>
-    <p class="text-sm text-slate-500 mb-6">Pilotage de la plateforme : utilisateurs, contenus, corrections, statistiques.</p>
+    <p class="text-sm text-slate-500 mb-6">Pilotage de la plateforme : utilisateurs, niveaux QCM, défis IA, statistiques.</p>
 
-    <div class="grid md:grid-cols-4 gap-4">
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-white border border-slate-200 rounded-2xl p-5">
             <div class="text-sm text-slate-400">Utilisateurs</div>
             <div class="text-2xl font-bold">{{ $users }}</div>
         </div>
         <div class="bg-white border border-slate-200 rounded-2xl p-5">
-            <div class="text-sm text-slate-400">Modelltests</div>
-            <div class="text-2xl font-bold">{{ $published }} / {{ $modelltests }}</div>
+            <div class="text-sm text-slate-400">Tests de niveau publiés</div>
+            <div class="text-2xl font-bold">{{ $levelTracks }}</div>
+        </div>
+        <div class="bg-white border border-slate-200 rounded-2xl p-5">
+            <div class="text-sm text-slate-400">Exercices QCM</div>
+            <div class="text-2xl font-bold">{{ $exercises }}</div>
         </div>
         <div class="bg-white border border-slate-200 rounded-2xl p-5">
             <div class="text-sm text-slate-400">Tentatives en cours</div>
             <div class="text-2xl font-bold">{{ $attemptsInProgress }}</div>
         </div>
         <div class="bg-white border border-slate-200 rounded-2xl p-5">
-            <div class="text-sm text-slate-400">Corrections en attente</div>
-            <div class="text-2xl font-bold">{{ $pendingCorrections }}</div>
+            <div class="text-sm text-slate-400">Espaces Élite débloqués</div>
+            <div class="text-2xl font-bold">{{ $eliteUnlocks }}</div>
         </div>
         <div class="bg-white border border-slate-200 rounded-2xl p-5">
-            <div class="text-sm text-slate-400">Analyses IA terminées</div>
-            <div class="text-2xl font-bold">{{ $aiCompleted }}</div>
-        </div>
-        <div class="bg-white border border-slate-200 rounded-2xl p-5">
-            <div class="text-sm text-slate-400">Erreurs IA</div>
-            <div class="text-2xl font-bold">{{ $aiFailed }}</div>
+            <div class="text-sm text-slate-400">Défis IA prêts / échoués</div>
+            <div class="text-2xl font-bold">{{ $challengesReady }} / {{ $challengesFailed }}</div>
         </div>
         <div class="bg-white border border-slate-200 rounded-2xl p-5">
             <div class="text-sm text-slate-400">Score moyen / compétence</div>
@@ -39,17 +39,11 @@
                 <div class="text-xs">{{ $skill }} : <strong>{{ Format::percent($avg, 0) }}</strong></div>
             @endforeach
         </div>
-        <div class="bg-white border border-slate-200 rounded-2xl p-5">
-            <div class="text-sm text-slate-400">Stockage média</div>
-            <div class="text-2xl font-bold">{{ $mediaCount }}</div>
-            <div class="text-xs text-slate-400">{{ round($mediaSize / 1048576, 1) }} Mo</div>
-        </div>
     </div>
 
-    <div class="grid md:grid-cols-4 gap-4 mt-6">
-        <a href="{{ route('admin.modelltests.index') }}" class="rounded-2xl bg-slate-900 text-white text-center px-4 py-3 text-sm font-medium hover:bg-slate-700">Modelltests</a>
+    <div class="grid sm:grid-cols-3 gap-4 mt-6">
         <a href="{{ route('admin.exercises.index') }}" class="rounded-2xl bg-slate-900 text-white text-center px-4 py-3 text-sm font-medium hover:bg-slate-700">Exercices</a>
-        <a href="{{ route('admin.corrections.index') }}" class="rounded-2xl bg-slate-900 text-white text-center px-4 py-3 text-sm font-medium hover:bg-slate-700">Corrections</a>
+        <a href="{{ route('admin.users.index') }}" class="rounded-2xl bg-slate-900 text-white text-center px-4 py-3 text-sm font-medium hover:bg-slate-700">Utilisateurs</a>
         <a href="{{ route('admin.settings.edit') }}" class="rounded-2xl bg-slate-900 text-white text-center px-4 py-3 text-sm font-medium hover:bg-slate-700">Paramètres IA</a>
     </div>
 

@@ -43,7 +43,7 @@ MAX_AI_REQUESTS=200
 
 - Let's Encrypt : `sudo certbot --nginx -d testdaf.example.com`.
 - Forcer le redirect 301 http → https ; ajouter `Strict-Transport-Security`.
-- **Indispensable pour Sprechen** : `MediaRecorder` (micro) n'est actif que sur contexte sécurisé (HTTPS ou `127.0.0.1`).
+- HTTPS reste recommandé (sessions sécurisées, cookies `secure`).
 
 ## 4. Configuration Nginx (extrait)
 
@@ -126,12 +126,12 @@ sudo crontab -e
 1. `composer install --no-dev --optimize-autoloader`
 2. `npm ci && npm run build`
 3. Migrations : `php artisan migrate --force` (fenêtre de maintenance : `php artisan down` → up)
-4. Seeders de contenu si nécessaire (`db:seed --class=ModellTestSeeder`)
+4. Contenu : `php artisan synphonie:seed-content`, puis `php artisan synphonie:make-admin vous@example.com "Nom"`
 5. Cache : `config:cache route:cache view:cache event:cache`
-6. Certificat TLS + redirect ; tester le micro (Sprechen) sur la page d'examen
+6. Certificat TLS + redirect
 7. Worker + cron démarrés ; `php artisan optimize`
-8. Smoke test : inscription → Modelltest 1 (1 tâche au moins) → correction objectives → page résultats
-9. Sauvegarde initiale de la base + des médias
+8. Smoke test : inscription → niveau A1 → correction → page résultats
+9. Sauvegarde initiale de la base
 10. Changer les mots de passe démo et supprimer les comptes démo
 
 ## 10. Pannes de production fréquentes

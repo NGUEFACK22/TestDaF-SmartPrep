@@ -15,11 +15,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             AdminUserSeeder::class,
             SettingSeeder::class,
-            ModellTestSeeder::class,
-            ModellTestMediaSeeder::class,
-            HoerenDemoSeeder::class,
-            LevelTestSeeder::class,
-
+            LevelTrackSeeder::class,
         ]);
     }
 }

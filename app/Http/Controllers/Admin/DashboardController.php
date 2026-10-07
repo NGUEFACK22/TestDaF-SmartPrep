@@ -4,13 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\AttemptStatus;
 use App\Http\Controllers\Controller;
-use App\Models\AiEvaluation;
+use App\Models\AiChallenge;
 use App\Models\Attempt;
-use App\Models\ManualCorrection;
-use App\Models\Media;
+use App\Models\ChallengeUnlock;
+use App\Models\Exercise;
 use App\Models\ModellTest;
 use App\Models\User;
-use App\Models\WritingSubmission;
 use App\Services\Statistics\StatisticsService;
 
 class DashboardController extends Controller
@@ -22,15 +21,12 @@ class DashboardController extends Controller
         return view('admin.dashboard', [
             'overview' => $this->statistics->adminOverview(),
             'users' => User::count(),
-            'modelltests' => ModellTest::count(),
-            'published' => ModellTest::where('status', 'published')->count(),
+            'levelTracks' => ModellTest::where('status', 'published')->count(),
+            'exercises' => Exercise::count(),
             'attemptsInProgress' => Attempt::where('status', AttemptStatus::InProgress->value)->count(),
-            'pendingCorrections' => ManualCorrection::where('status', 'pending')->count()
-                + WritingSubmission::whereNull('submitted_at')->count(),
-            'aiCompleted' => AiEvaluation::where('status', 'completed')->count(),
-            'aiFailed' => AiEvaluation::where('status', 'failed')->count(),
-            'mediaCount' => Media::count(),
-            'mediaSize' => (int) Media::sum('size'),
+            'eliteUnlocks' => ChallengeUnlock::count(),
+            'challengesReady' => AiChallenge::where('status', 'ready')->count(),
+            'challengesFailed' => AiChallenge::where('status', 'failed')->count(),
             'recentAttempts' => Attempt::with(['user', 'modellTest'])->latest()->take(10)->get(),
         ]);
     }

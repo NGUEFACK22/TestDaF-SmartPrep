@@ -204,7 +204,7 @@ class StatisticsService
         for ($i = 1; $i <= 8; $i++) {
             Cache::forget("stats:weak:{$userId}:{$i}");
         }
-        foreach (['all', 'lesen', 'hoeren', 'schreiben', 'sprechen'] as $s) {
+        foreach (['all', 'lesen'] as $s) {
             Cache::forget("stats:evolution:{$userId}:{$s}");
         }
     }

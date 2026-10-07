@@ -15,8 +15,8 @@ use App\Models\Section;
 use App\Models\User;
 use App\Notifications\ChallengeReady;
 use App\Notifications\ChallengeUnlocked;
+use App\Models\Setting;
 use App\Services\AI\GeminiService;
-use App\Services\Evaluation\AiEvaluationService;
 use App\Services\Statistics\StatisticsService;
 use Illuminate\Support\Facades\DB;
 
@@ -34,9 +34,28 @@ class ChallengeService
 {
     public function __construct(
         private GeminiService $gemini,
-        private AiEvaluationService $ai,
         private StatisticsService $statistics,
     ) {}
+
+    /** Quota journalier de générations IA (Setting admin, défaut .env). */
+    public function quotaLimit(): int
+    {
+        try {
+            return (int) Setting::get('max_ai_requests', config('testdaf.ai.max_requests', 100));
+        } catch (\Throwable) {
+            return (int) config('testdaf.ai.max_requests', 100);
+        }
+    }
+
+    public function dailyUsage(): int
+    {
+        return AiChallenge::where('requested_at', '>=', now()->startOfDay())->count();
+    }
+
+    public function quotaExceeded(): bool
+    {
+        return $this->dailyUsage() >= $this->quotaLimit();
+    }
 
     // ---------------------------------------------------------- éligibilité
 
@@ -120,9 +139,42 @@ class ChallengeService
             throw new \RuntimeException("Espace Élite non débloqué pour ce test (2 scores parfaits requis).");
         }
 
-        if ($this->ai->quotaExceeded()) {
+        if ($this->quotaExceeded()) {
             throw new \RuntimeException(
-                "Quota IA journalier atteint ({$this->ai->dailyUsage()}/{$this->ai->quotaLimit()}). Réessayez demain."
+                "Quota IA journalier atteint ({$this->dailyUsage()}/{$this->quotaLimit()}). Réessayez demain."
+            );
+        }
+
+        if ($this->activeChallenge($user)) {
+            throw new \RuntimeException('Un défi est déjà en cours : terminez-le ou attendez sa génération.');
+        }
+
+        $weak = $this->statistics->weakQuestionTypes($user, 5);
+        $progress = $this->statistics->skillProgress($user);
+
+        return $this->createGeneration($user, $test->id, 'C1');
+    }
+
+    /**
+     * Session IA directe d'un niveau (C1/C2, voie « entraînement par niveau ») :
+     * sans condition d'unlock, même quota et même file d'attente.
+     */
+    public function requestLevelGeneration(User $user, string $level): AiChallenge
+    {
+        $level = strtoupper($level);
+
+        if (! in_array($level, ['C1', 'C2'], true)) {
+            throw new \RuntimeException('Génération IA disponible pour les niveaux C1 et C2.');
+        }
+
+        return $this->createGeneration($user, null, $level);
+    }
+
+    private function createGeneration(User $user, ?int $modellTestId, string $level): AiChallenge
+    {
+        if ($this->quotaExceeded()) {
+            throw new \RuntimeException(
+                "Quota IA journalier atteint ({$this->dailyUsage()}/{$this->quotaLimit()}). Réessayez demain."
             );
         }
 
@@ -135,10 +187,10 @@ class ChallengeService
 
         $challenge = AiChallenge::create([
             'user_id' => $user->id,
-            'modell_test_id' => $test->id,
+            'modell_test_id' => $modellTestId,
             'skill' => Skill::Lesen->value,
             'status' => 'generating',
-            'level' => 'C1',
+            'level' => $level,
             'weak_snapshot' => ['weak_types' => $weak, 'progress' => $progress],
             'requested_at' => now(),
         ]);
@@ -159,7 +211,7 @@ class ChallengeService
             return $this->markFailed($challenge, 'Analyse IA indisponible (clé API non configurée).');
         }
 
-        if ($this->ai->quotaExceeded()) {
+        if ($this->quotaExceeded()) {
             return $this->markFailed($challenge, 'Quota IA journalier atteint. Réessayez demain.');
         }
 
@@ -199,7 +251,7 @@ class ChallengeService
     {
         $nonce = bin2hex(random_bytes(4));
         $items = $this->normalizeItems(
-            $this->gemini->generateJson($this->buildPrompt($challenge, $min, $nonce), $this->systemPrompt())
+            $this->gemini->generateJson($this->buildPrompt($challenge, $min, $nonce), $this->systemPrompt($challenge))
         );
 
         if (count($items) >= $min) {
@@ -208,7 +260,7 @@ class ChallengeService
 
         // Relance : on demande de COMPLÉTER (pas de recommencer).
         $more = $this->normalizeItems(
-            $this->gemini->generateJson($this->completePrompt($challenge, $min, count($items), $nonce), $this->systemPrompt())
+            $this->gemini->generateJson($this->completePrompt($challenge, $min, count($items), $nonce), $this->systemPrompt($challenge))
         );
 
         $seen = collect($items)->map(fn ($i) => mb_strtolower(trim((string) ($i['prompt'] ?? ''))))->all();
@@ -223,10 +275,12 @@ class ChallengeService
         return $items;
     }
 
-    private function systemPrompt(): string
+    private function systemPrompt(AiChallenge $challenge): string
     {
+        $level = strtoupper((string) ($challenge->level ?? 'C1'));
+
         return 'Du bist ein erfahrener TestDaF-Autor. Du erstellst ORIGINELLE Leseverstehens-QCM '
-            .'im TestDaF-Rahmen (universitäre Themen, Niveau C1, 4 Antwortoptionen a-d, genau EINE richtige). '
+            ."im TestDaF-Rahmen (universitäre Themen, Niveau {$level}, 4 Antwortoptionen a-d, genau EINE richtige). "
             .'Antworte NUR mit gültigem JSON: ein Array von Objekten mit den Feldern '
             .'stimulus (kurzer deutscher Lesetext 40-70 Wörter, originell), prompt (Frage auf Deutsch), '
             .'options (Objekt mit EXAKT den Schlüsseln a, b, c, d), correct (einer von a, b, c, d), '
@@ -236,15 +290,18 @@ class ChallengeService
 
     private function buildPrompt(AiChallenge $challenge, int $min, string $nonce): string
     {
+        $level = strtoupper((string) ($challenge->level ?? 'C1'));
+        $mix = $level === 'C2' ? 'C1/C1+ (exigeant, quasi natif)' : 'B2/C1/C1+ mélangées';
+
         $weak = collect($challenge->weak_snapshot['weak_types'] ?? [])
             ->map(fn ($r) => "{$r['type']} ({$r['error_rate']} % d'erreurs)")
             ->implode(', ') ?: 'aucune faiblesse marquée (niveau homogène)';
 
         return implode("\n", [
             "Génération Défi IA #{$nonce} (à chaque demande, textes et thèmes DOIVENT être inédits).",
-            "Cadre : TestDaF digital, Leseverstehen, niveau C1, thèmes universitaires variés.",
+            "Cadre : TestDaF digital, Leseverstehen, niveau {$level} STRICT (vocabulaire, syntaxe et implicite calibrés {$level}), thèmes universitaires variés.",
             "Faiblesses analysées du candidat à cibler en priorité : {$weak}.",
-            "Produis EXACTEMENT {$min} QCM single_choice variés (difficultés B2/C1/C1+ mélangées), "
+            "Produis EXACTEMENT {$min} QCM single_choice variés (difficultés {$mix}), "
             .'stimulus originaux, distracteurs crédibles (pas de bonne réponse évidente).',
         ]);
     }
@@ -338,13 +395,15 @@ class ChallengeService
             $base = (int) config('testdaf.challenge.test_number_base', 900);
             $number = $base + (int) ModellTest::where('number', '>=', $base)->count() + 1;
 
+            $level = strtoupper((string) ($challenge->level ?? 'C1'));
+
             $test = ModellTest::create([
                 'number' => $number,
-                'title' => 'Défi IA — Lesen ('.count($items).' QCM inédits)',
-                'description' => 'QCM générés par IA sur mesure (cadre TestDaF, niveau C1). Chaque génération est inédite.',
+                'title' => "Défi IA {$level} — Lesen (".count($items).' QCM inédits)',
+                'description' => "QCM générés par IA sur mesure (cadre TestDaF, niveau {$level}). Chaque génération est inédite.",
                 'theme' => 'Défi IA sur mesure',
-                'difficulty' => 'C1',
-                'status' => 'draft', // invisible de /modelltests, jouable via /challenges
+                'difficulty' => $level,
+                'status' => 'draft', // invisible des listes, jouable via /challenges
                 'created_by' => $challenge->user_id,
             ]);
 
@@ -361,10 +420,10 @@ class ChallengeService
             $exercise = Exercise::create([
                 'skill' => Skill::Lesen,
                 'type' => 'multiple_choice',
-                'title' => 'Défi IA — QCM inédits',
-                'level' => 'C1',
-                'difficulty' => 'C1',
-                'instruction' => "QCM inédits générés par IA dans le cadre TestDaF. Lisez chaque stimulus et choisissez la bonne réponse (a–d).",
+                'title' => "Défi IA {$level} — QCM inédits",
+                'level' => $level,
+                'difficulty' => $level,
+                'instruction' => "QCM inédits générés par IA dans le cadre du niveau {$level}. Lisez chaque stimulus et choisissez la bonne réponse (a–d).",
                 'duration_seconds' => $totalTime,
                 'points' => count($items),
                 'position' => 0,

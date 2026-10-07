@@ -17,8 +17,7 @@
             @auth
                 <nav class="hidden md:flex items-center gap-1 text-sm" aria-label="Navigation principale">
                     <a href="{{ route('dashboard') }}" class="px-3 py-2 rounded-lg hover:bg-slate-100 {{ request()->routeIs('dashboard') ? 'bg-slate-100 font-semibold' : '' }}">Tableau de bord</a>
-                    <a href="{{ route('modelltests.index') }}" class="px-3 py-2 rounded-lg hover:bg-slate-100 {{ request()->routeIs('modelltests.*') ? 'bg-slate-100 font-semibold' : '' }}">Modelltests</a>
-                    <a href="{{ route('preparation.index') }}" class="px-3 py-2 rounded-lg hover:bg-slate-100 {{ request()->routeIs('preparation.*') ? 'bg-slate-100 font-semibold' : '' }}">Préparation</a>
+                    <a href="{{ route('preparation.index') }}" class="px-3 py-2 rounded-lg hover:bg-slate-100 {{ request()->routeIs('preparation.*') ? 'bg-slate-100 font-semibold' : '' }}">Niveaux</a>
                     <a href="{{ route('challenges.index') }}" class="px-3 py-2 rounded-lg hover:bg-slate-100 {{ request()->routeIs('challenges.*') ? 'bg-slate-100 font-semibold' : '' }}">Défis IA 🏆</a>
                     <a href="{{ route('notifications.index') }}" class="px-3 py-2 rounded-lg hover:bg-slate-100 {{ request()->routeIs('notifications.*') ? 'bg-slate-100 font-semibold' : '' }}">Notifications</a>
                     @if (auth()->user()->isAdmin())
@@ -41,8 +40,7 @@
         @auth
             <nav id="mobile-menu" class="menu-hidden md:hidden border-t border-slate-200 px-4 py-3 space-y-1 text-sm" aria-label="Navigation mobile">
                 <a href="{{ route('dashboard') }}" class="block px-3 py-2.5 rounded-lg hover:bg-slate-100">Tableau de bord</a>
-                <a href="{{ route('modelltests.index') }}" class="block px-3 py-2.5 rounded-lg hover:bg-slate-100">Modelltests</a>
-                <a href="{{ route('preparation.index') }}" class="block px-3 py-2.5 rounded-lg hover:bg-slate-100">Préparation</a>
+                <a href="{{ route('preparation.index') }}" class="block px-3 py-2.5 rounded-lg hover:bg-slate-100">Niveaux</a>
                 <a href="{{ route('challenges.index') }}" class="block px-3 py-2.5 rounded-lg hover:bg-slate-100">Défis IA 🏆</a>
                 <a href="{{ route('notifications.index') }}" class="block px-3 py-2.5 rounded-lg hover:bg-slate-100">Notifications</a>
                 @if (auth()->user()->isAdmin())

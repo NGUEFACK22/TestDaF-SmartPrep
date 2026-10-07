@@ -199,6 +199,5 @@ Attaque de référence attendue : `21 passed (48 assertions)` ou davantage — m
 |---|---|
 | `composer install` lent / verrou | relancer avec `composer install --no-interaction` ; fermer les proces PHP résiduels (`Get-Process php | Stop-Process`) |
 | `could not find driver` | activer `pdo_sqlite` / `pdo_mysql` dans `php.ini` (`extension=...`), puis relancer |
-| `403` sur les uploads | vérifier les droits d'écriture sur `storage/` |
-| Micro refusé (Sprechen) | le navigateur exige **HTTPS ou 127.0.0.1** pour `MediaRecorder` ; autoriser l'accès micro dans l'onglet Site info → autorisations |
+| `403` sur une page | vérifier la connexion et le rôle du compte |
 | Timer décalé | le serveur est l'autorité : `php artisan config:clear` puis vérifier l'horloge du **serveur** (pas du navigateur) |

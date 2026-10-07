@@ -3,10 +3,8 @@
 namespace App\Http\Controllers\Candidate;
 
 use App\Http\Controllers\Controller;
-use App\Models\Media;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Compte RGPD : visualisation, export JSON des données personnelles,
@@ -51,7 +49,7 @@ class AccountController extends Controller
             ->header('Content-Disposition', 'attachment; filename="donnees-testdaf-'.$user->id.'.json"');
     }
 
-    /** Suppression définitive : fichiers privés + compte (cascades DB). */
+    /** Suppression définitive du compte (cascades DB : tentatives, réponses…). */
     public function destroy(Request $request)
     {
         $request->validate([
@@ -60,23 +58,6 @@ class AccountController extends Controller
         ]);
 
         $user = $request->user();
-
-        // Supprime les fichiers privés du candidat avant la cascade DB.
-        $mediaPaths = Media::query()
-            ->where('created_at', '>', now()->subYears(20))
-            ->get()
-            ->filter(fn (Media $m) => ($m->meta['public'] ?? true) === false
-                && (int) ($m->meta['uploaded_by'] ?? 0) === (int) $user->id);
-
-        foreach ($mediaPaths as $media) {
-            try {
-                if ($media->path && Storage::disk($media->disk ?: 'local')->exists($media->path)) {
-                    Storage::disk($media->disk ?: 'local')->delete($media->path);
-                }
-            } catch (\Throwable $e) {
-                report($e);
-            }
-        }
 
         Auth::logout();
         $request->session()->invalidate();

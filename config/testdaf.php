@@ -10,12 +10,12 @@ return [
     'question_types' => [
         'multiple_choice', 'single_choice', 'true_false', 'matching', 'ordering',
         'fill_blank', 'short_answer', 'category_assignment', 'pair_assignment',
-        'text_input', 'essay', 'audio_response', 'video_response',
+        'text_input',
     ],
 
     /*
     |--------------------------------------------------------------------------
-    | Familles d'exercices par compétence (référence pédagogique TestDaF)
+    | Familles d'exercices Lesen (référence pédagogique TestDaF, QCM écrit)
     |--------------------------------------------------------------------------
     | Décrit la structure pédagogique ; aucun contenu protégé n'est copié.
     */
@@ -28,28 +28,6 @@ return [
             'aussagen_kategorien_zuordnen' => 'Aussagen Kategorien zuordnen',
             'aussagen_begriffspaar_zuordnen' => 'Aussagen einem Begriffspaar zuordnen',
             'fehler_in_zusammenfassung_erkennen' => 'Fehler in Zusammenfassung erkennen',
-        ],
-        'hoeren' => [
-            'kurzantwort_uebersicht_ergaenzen' => 'Kurzantwort – Übersicht ergänzen',
-            'kurzantwort_textstellen_begriffspaar' => 'Kurzantwort – Textstellen zu Begriffspaar notieren',
-            'fehler_in_zusammenfassung_erkennen' => 'Fehler in Zusammenfassung erkennen',
-            'aussagen_personen_zuordnen' => 'Aussagen Personen zuordnen',
-            'kurzantwort_gliederungspunkte' => 'Kurzantwort – Gliederungspunkte zu Vortrag ergänzen',
-            'multiple_choice' => 'Multiple Choice',
-            'laut_und_schriftbild_abgleichen' => 'Laut- und Schriftbild abgleichen',
-        ],
-        'schreiben' => [
-            'argumentativen_text_schreiben' => 'Argumentativen Text schreiben',
-            'informationen_zusammenfassen' => 'Informationen aus Lesetext und Grafik zusammenfassen',
-        ],
-        'sprechen' => [
-            'rat_geben' => 'Rat geben',
-            'optionen_abwaegen' => 'Optionen abwägen',
-            'text_zusammenfassen' => 'Text zusammenfassen',
-            'informationen_abgleichen_stellung_nehmen' => 'Informationen abgleichen und Stellung nehmen',
-            'thema_praesentieren' => 'Thema präsentieren',
-            'argumente_wiedergeben_stellung_nehmen' => 'Argumente wiedergeben und Stellung nehmen',
-            'massnahmen_kritisieren' => 'Maßnahmen kritisieren',
         ],
     ],
 
@@ -67,45 +45,6 @@ return [
         'grace_seconds' => 2,
         // Sauvegarde automatique côté client (intervalle, secondes).
         'autosave_interval' => 10,
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Médias (stockage privé)
-    |--------------------------------------------------------------------------
-    */
-    'media' => [
-        'disk' => env('TESTDAF_MEDIA_DISK', 'local'),
-
-        'audio' => [
-            'max_kb' => 20480, // 20 Mo
-            'mimes' => ['audio/webm', 'audio/ogg', 'audio/mpeg', 'audio/wav', 'audio/mp4', 'audio/x-m4a'],
-            'extensions' => ['webm', 'ogg', 'mp3', 'wav', 'm4a'],
-        ],
-        'video' => [
-            'max_kb' => 102400, // 100 Mo
-            'mimes' => ['video/webm', 'video/mp4', 'video/ogg', 'video/quicktime'],
-            'extensions' => ['webm', 'mp4', 'ogv', 'mov'],
-        ],
-        'image' => [
-            'max_kb' => 5120,
-            'mimes' => ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
-            'extensions' => ['jpg', 'jpeg', 'png', 'webp', 'gif'],
-        ],
-        'document' => [
-            'max_kb' => 10240,
-            'mimes' => ['application/pdf'],
-            'extensions' => ['pdf'],
-        ],
-
-        // Répertoires privés (storage/app/private/...)
-        'paths' => [
-            'audio' => 'candidate_audio',
-            'video' => 'candidate_video',
-            'image' => 'candidate_images',
-            'document' => 'candidate_documents',
-            'content' => 'content_media',
-        ],
     ],
 
     /*
@@ -189,9 +128,6 @@ return [
     */
     'skills' => [
         'lesen' => 'Lesen',
-        'hoeren' => 'Hören',
-        'schreiben' => 'Schreiben',
-        'sprechen' => 'Sprechen',
     ],
 
     /*
@@ -217,27 +153,6 @@ return [
             ['min' => 16, 'max' => 20, 'label' => 'TDN 5'],
         ],
         'target' => ['min' => 16, 'max' => 20, 'label' => 'TDN 5 (C1)'],
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Sprechen — objectifs de temps de parole par type de tâche
-    |--------------------------------------------------------------------------
-    | Référentiel du TestDaF digital (temps indicatifs de production orale).
-    | Le candidat dispose par ailleurs d'un temps de préparation qui fait
-    | partie du déroulement de chaque tâche.
-    */
-    'sprechen' => [
-        'prep_seconds_default' => 60,
-        'targets' => [
-            'rat_geben' => 45,
-            'optionen_abwaegen' => 90,
-            'text_zusammenfassen' => 120,
-            'informationen_abgleichen_stellung_nehmen' => 90,
-            'thema_praesentieren' => 150,
-            'argumente_wiedergeben_stellung_nehmen' => 120,
-            'massnahmen_kritisieren' => 90,
-        ],
     ],
 
     /*
@@ -289,85 +204,6 @@ return [
                 ],
                 'tip' => 'Les temps d\'exemple officiels (ex. Lückentext 4 min, Multiple Choice 15 min) sont indicatifs : '
                     .'les vrais temps sont stockés par tâche, ils varient selon le test.',
-            ],
-            'hoeren' => [
-                'title' => 'HÖREN — méthode C1',
-                'competences' => [
-                    'suivre une discussion ;',
-                    'identifier l\'idée principale ;',
-                    'repérer les détails importants ;',
-                    'distinguer important / secondaire ;',
-                    'comprendre une intention et une information implicite ;',
-                    'suivre la structure d\'un exposé ;',
-                    'prendre rapidement des notes.',
-                ],
-                'method' => [
-                    'Avant l\'écoute : lire rapidement les éléments visibles de la tâche.',
-                    'Pendant l\'écoute : ne pas essayer de traduire chaque mot.',
-                    'Chercher : Wer ? Was ? Warum ? Wie ? Welche Folge ? Welche Position ? Welche Meinung ?',
-                    'Pour le C1 : comprendre le raisonnement, pas seulement reconnaître des mots.',
-                ],
-                'tip' => 'Dans « Fehler in Zusammenfassung erkennen », comparez ce qui est dit avec le résumé écrit : '
-                    .'chaque écart (faux, omis, ajouté) compte.',
-            ],
-            'schreiben' => [
-                'title' => 'SCHREIBEN — méthode C1',
-                'tasks' => [
-                    'Aufgabe 1 — Argumentativen Text schreiben : minimum 200 mots.',
-                    'Aufgabe 2 — Informationen aus Lesetext und Grafik zusammenfassen : environ 100–150 mots.',
-                ],
-                'structure' => [
-                    'Introduction : présenter le problème.',
-                    'Position : exprimer clairement son point de vue.',
-                    'Argument 1 + Argument 2 : argument, explication, exemple.',
-                    'Contre-argument : présenter une autre position.',
-                    'Réfutation / nuance : montrer pourquoi sa propre position reste défendable.',
-                    'Conclusion : résumer sans simplement répéter l\'introduction.',
-                ],
-                'prefer' => [
-                    'Aus meiner Sicht …',
-                    'Es lässt sich argumentieren, dass …',
-                    'Ein wesentlicher Vorteil besteht darin, dass …',
-                    'Demgegenüber ist zu berücksichtigen, dass …',
-                ],
-                'avoid' => [
-                    'Répéter « Ich denke … » : privilégier une expression différenciée.',
-                    'Recopier les données brutes du graphique : il faut les comparer, les sélectionner et les reformuler.',
-                ],
-            ],
-            'sprechen' => [
-                'title' => 'SPRECHEN — méthode C1',
-                'competences' => [
-                    'parler clairement + logiquement + précisément + naturellement (l\'objectif n\'est pas de parler vite) ;',
-                    'adapter son discours à la situation universitaire ;',
-                    'structurer un discours en temps limité.',
-                ],
-                'structure' => [
-                    'Introduction',
-                    'Idée principale',
-                    'Argument',
-                    'Explication',
-                    'Exemple',
-                    'Nuance / comparaison',
-                    'Conclusion',
-                ],
-                'connectors' => [
-                    'zunächst',
-                    'darüber hinaus',
-                    'einerseits … andererseits',
-                    'allerdings',
-                    'dennoch',
-                    'hingegen',
-                    'folglich',
-                    'daher',
-                    'aus diesem Grund',
-                    'abschließend',
-                ],
-                'evaluation' => [
-                    'L\'effet global : le discours est-il fluide, clair, compréhensible, correctement structuré ?',
-                    'La réalisation de la tâche : répond-on vraiment au sujet, tous les éléments demandés sont-ils traités, la situation est-elle respectée ?',
-                    'Les moyens linguistiques : registre, vocabulaire, syntaxe, adéquation des formulations, erreurs, facilité de compréhension.',
-                ],
             ],
         ],
     ],

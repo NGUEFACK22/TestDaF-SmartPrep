@@ -53,21 +53,6 @@ class Attempt extends Model
         return $this->hasMany(Result::class);
     }
 
-    public function writingSubmissions(): HasMany
-    {
-        return $this->hasMany(WritingSubmission::class);
-    }
-
-    public function speakingSubmissions(): HasMany
-    {
-        return $this->hasMany(SpeakingSubmission::class);
-    }
-
-    public function aiEvaluations(): HasMany
-    {
-        return $this->hasMany(AiEvaluation::class);
-    }
-
     public function isInProgress(): bool
     {
         return $this->status === AttemptStatus::InProgress;

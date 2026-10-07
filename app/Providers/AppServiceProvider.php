@@ -3,11 +3,7 @@
 namespace App\Providers;
 
 use App\Database\Connectors\NeonPgsqlConnector;
-use App\Filesystem\DatabaseMediaAdapter;
-use Illuminate\Filesystem\FilesystemAdapter as LaravelFilesystemAdapter;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
-use League\Flysystem\Filesystem;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -31,13 +27,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Disque "database" : fichiers stockés en base (100 % Neon, sans S3).
-        // Tout le code existant (MediaService, purge, seeders) fonctionne
-        // sans modification via Storage::disk('database').
-        Storage::extend('database', function ($app, array $config) {
-            $adapter = new DatabaseMediaAdapter();
-
-            return new LaravelFilesystemAdapter(new Filesystem($adapter, $config), $adapter, $config);
-        });
+        //
     }
 }

@@ -41,14 +41,6 @@
         </a>
     </div>
 
-    @if ($aiPending > 0)
-        <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            Les productions nécessitant une analyse sont en cours de traitement.
-            Les résultats Schreiben / Sprechen apparaîtront ici dès leur analyse.
-            <a href="{{ route('results.show', $attempt) }}" class="font-medium underline">Actualiser</a>
-        </div>
-    @endif
-
     <div class="grid md:grid-cols-2 gap-4 mt-6">
         @foreach (\App\Enums\Skill::sequence() as $skill)
             @php
@@ -119,7 +111,6 @@
         <h2 class="font-semibold mb-3 mt-6">Points à améliorer</h2>
         @php
             $hints = [
-                'hoeren' => 'Ré-écoutez les passages des questions ratées sans note : travaillez l\'écoute sélective (qui ? quoi ? pourquoi ? ce qui est omis ?).',
                 'lesen' => 'Re-lisez les passages du texte correspondant aux questions ratées et reformulez les réponses piégées avec vos propres mots.',
             ];
             $withIssues = collect($partSummary)->filter(fn ($p) => count($p['issues']) > 0);
@@ -142,7 +133,7 @@
     </div>
 
     <div class="bg-white border border-slate-200 rounded-2xl p-5 mt-6">
-        <h2 class="font-semibold mb-3">Correction détaillée (Lesen / Hören)</h2>
+        <h2 class="font-semibold mb-3">Correction détaillée (QCM)</h2>
         @forelse ($attempt->attemptExercises as $ae)
             @if (! $ae->exercise->skill->isProductive() && $ae->formQuestions()->isNotEmpty())
                 <div class="mb-5">
@@ -171,25 +162,4 @@
         @endforelse
     </div>
 
-    <div class="bg-white border border-slate-200 rounded-2xl p-5 mt-6">
-        <h2 class="font-semibold mb-3">Analyses IA (indicatif — entraînement uniquement)</h2>
-        @forelse ($attempt->writingSubmissions->concat($attempt->speakingSubmissions) as $submission)
-            @foreach ($submission->aiEvaluations as $evaluation)
-                <div class="mb-4 text-sm">
-                    <div class="font-medium">{{ ucfirst($evaluation->skill) }}
-                        <span class="text-xs text-slate-400">— {{ $evaluation->status }}@if ($evaluation->indicatorScore() !== null) · score indicatif {{ Format::number($evaluation->indicatorScore(), 1) }}/20 @endif</span>
-                    </div>
-                    @if ($evaluation->feedback)
-                        <p class="text-slate-600 mt-1 whitespace-pre-line">{{ $evaluation->feedback }}</p>
-                    @elseif ($evaluation->error)
-                        <p class="text-amber-700 mt-1">Analyse en attente ({{ $evaluation->error }})</p>
-                    @else
-                        <p class="text-slate-500 mt-1">Analyse en cours…</p>
-                    @endif
-                </div>
-            @endforeach
-        @empty
-            <p class="text-sm text-slate-500">Aucune analyse disponible.</p>
-        @endforelse
-    </div>
 @endsection

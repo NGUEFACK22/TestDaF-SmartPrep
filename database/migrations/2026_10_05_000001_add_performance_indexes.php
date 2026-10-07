@@ -21,11 +21,6 @@ return new class extends Migration
             $table->index(['skill', 'percentage'], 'results_skill_pct_idx');
         });
 
-        Schema::table('ai_evaluations', function (Blueprint $table) {
-            $table->index(['attempt_id', 'status'], 'ai_eval_attempt_status_idx');
-            $table->index(['user_id', 'status'], 'ai_eval_user_status_idx');
-        });
-
         Schema::table('exam_logs', function (Blueprint $table) {
             $table->index(['user_id', 'created_at'], 'exam_logs_user_created_idx');
             $table->index(['event', 'created_at'], 'exam_logs_event_created_idx');
@@ -43,14 +38,6 @@ return new class extends Migration
         Schema::table('questions', function (Blueprint $table) {
             $table->index(['type', 'difficulty'], 'questions_type_diff_idx');
         });
-
-        Schema::table('writing_submissions', function (Blueprint $table) {
-            $table->index(['user_id', 'locked'], 'writing_user_locked_idx');
-        });
-
-        Schema::table('speaking_submissions', function (Blueprint $table) {
-            $table->index(['user_id', 'locked'], 'speaking_user_locked_idx');
-        });
     }
 
     public function down(): void
@@ -62,10 +49,7 @@ return new class extends Migration
         Schema::table('results', function (Blueprint $table) {
             $table->dropIndex('results_skill_pct_idx');
         });
-        Schema::table('ai_evaluations', function (Blueprint $table) {
-            $table->dropIndex('ai_eval_attempt_status_idx');
-            $table->dropIndex('ai_eval_user_status_idx');
-        });
+        // (ai_challenges : voir migration 2026_10_06, table créée après.)
         Schema::table('exam_logs', function (Blueprint $table) {
             $table->dropIndex('exam_logs_user_created_idx');
             $table->dropIndex('exam_logs_event_created_idx');
@@ -79,12 +63,6 @@ return new class extends Migration
         });
         Schema::table('questions', function (Blueprint $table) {
             $table->dropIndex('questions_type_diff_idx');
-        });
-        Schema::table('writing_submissions', function (Blueprint $table) {
-            $table->dropIndex('writing_user_locked_idx');
-        });
-        Schema::table('speaking_submissions', function (Blueprint $table) {
-            $table->dropIndex('speaking_user_locked_idx');
         });
     }
 };

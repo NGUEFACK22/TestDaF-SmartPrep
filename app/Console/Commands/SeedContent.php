@@ -19,11 +19,7 @@ class SeedContent extends Command
     {
         $this->call('db:seed', ['--class' => 'Database\\Seeders\\RoleSeeder']);
         $this->call('db:seed', ['--class' => 'Database\\Seeders\\SettingSeeder']);
-        $this->call('db:seed', ['--class' => 'Database\\Seeders\\ModellTestSeeder']);
-        $this->call('db:seed', ['--class' => 'Database\\Seeders\\ModellTestMediaSeeder']);
-        $this->call('db:seed', ['--class' => 'Database\\Seeders\\HoerenDemoSeeder']);
-        $this->call('db:seed', ['--class' => 'Database\\Seeders\\LevelTestSeeder']);
-        $this->call('db:seed', ['--class' => 'Database\\Seeders\\C1ExerciseSeeder']);
+        $this->call('db:seed', ['--class' => 'Database\\Seeders\\LevelTrackSeeder']);
 
         $this->info('Contenu de production en place.');
 

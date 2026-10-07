@@ -9,20 +9,18 @@ use App\Models\Role;
 use App\Models\User;
 use App\Services\Exam\AnswerService;
 use App\Services\Exam\ExamService;
-use Database\Seeders\HoerenDemoSeeder;
-use Database\Seeders\LevelTestSeeder;
-use Database\Seeders\ModellTestSeeder;
+use Database\Seeders\LevelTrackSeeder;
 use Database\Seeders\RoleSeeder;
 use Database\Seeders\SettingSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * LevelTestFlowTest — flux « Préparation → niveau C1 → test de positionnement ».
+ * LevelTestFlowTest — entraînement QCM par niveau (A1 → C2).
  *
- * Le test C1 (LevelTestSeeder) contient deux parties :
- * - Hörverstehen (FIXE) : les 2 grandes tâches audio officielles ;
- * - Leseverstehen (DYNAMIQUE) : texte + forme de 4 QCM tirée par tentative.
+ * - La page Préparation liste les 6 niveaux (banques A1–C1 + IA C1–C2).
+ * - Démarrer un niveau crée une tentative chronométrée (tirage sans remise).
+ * - C1 (format TestDaF, 3 tâches) se joue en entier jusqu'aux résultats.
  */
 class LevelTestFlowTest extends TestCase
 {
@@ -37,9 +35,7 @@ class LevelTestFlowTest extends TestCase
         $this->seed([
             RoleSeeder::class,
             SettingSeeder::class,
-            ModellTestSeeder::class,
-            HoerenDemoSeeder::class,
-            LevelTestSeeder::class,
+            LevelTrackSeeder::class,
         ]);
 
         $role = Role::where('slug', 'candidate')->first();
@@ -48,17 +44,10 @@ class LevelTestFlowTest extends TestCase
 
     private function c1Test(): ModellTest
     {
-        return ModellTest::where('number', LevelTestSeeder::C1_TEST_NUMBER)->firstOrFail();
+        return ModellTest::where('number', LevelTrackSeeder::C1_TEST_NUMBER)->firstOrFail();
     }
 
-    private function candidate(): User
-    {
-        $role = Role::where('slug', 'candidate')->first();
-
-        return User::factory()->create(['role_id' => $role->id]);
-    }
-
-    public function test_preparation_page_lists_levels_with_direct_c1_start(): void
+    public function test_preparation_page_lists_all_levels_with_bank_and_ia(): void
     {
         $response = $this->actingAs($this->user)->get(route('preparation.index'));
 
@@ -68,92 +57,69 @@ class LevelTestFlowTest extends TestCase
             $response->assertSee($level);
         }
 
-        $response->assertSee('Commencer le test C1');
-        $response->assertSee('À venir');
-        $response->assertSee('Réviser par compétence');
+        $response->assertSee('Banque QCM', false);
+        $response->assertSee('IA inédite', false);
+        $response->assertSee('Espace Élite', false);
     }
 
-    public function test_starting_the_c1_level_creates_an_attempt_with_two_parts(): void
+    public function test_starting_a_bank_level_creates_a_timed_attempt(): void
     {
-        $response = $this->actingAs($this->user)->post(route('preparation.start', 'C1'));
+        $response = $this->actingAs($this->user)->post(route('preparation.start', 'A1'));
 
         $response->assertRedirect();
 
         $attempt = Attempt::latest('id')->first();
         $this->assertNotNull($attempt);
-        $this->assertSame($this->c1Test()->id, $attempt->modell_test_id);
+        $this->assertSame(ModellTest::where('number', 1)->first()->id, $attempt->modell_test_id);
 
-        $skills = $attempt->attemptExercises()->orderBy('position')->get()
-            ->map(fn ($ae) => $ae->exercise->skill->value)
-            ->all();
-
-        // Deux parties : d'abord l'audio (2 tâches), puis le texte.
-        $this->assertSame(['hoeren', 'hoeren', 'lesen'], $skills);
+        $tasks = $attempt->attemptExercises()->orderBy('position')->get();
+        $this->assertCount(1, $tasks);
+        $this->assertSame('lesen', $tasks->first()->exercise->skill->value);
     }
 
     public function test_unknown_levels_cannot_start_a_test(): void
     {
+        // C2 n'a pas de banque : démarrage classique impossible (IA uniquement).
         $this->actingAs($this->user)
-            ->post(route('preparation.start', 'A1'))
+            ->post(route('preparation.start', 'C2'))
+            ->assertNotFound();
+
+        $this->actingAs($this->user)
+            ->post(route('preparation.start', 'Z9'))
             ->assertNotFound();
     }
 
-    public function test_starting_a_level_picks_the_first_untried_test_then_rotates(): void
+    public function test_level_generation_is_limited_to_c1_and_c2(): void
     {
-        $engine = app(ExamService::class);
-        $b2Tests = ModellTest::where('difficulty', 'B2')->orderBy('number')->get();
-        $this->assertGreaterThanOrEqual(2, $b2Tests->count());
-
-        // Le candidat a déjà tenté le premier test B2 (ex. depuis la liste).
-        $engine->startAttempt($this->user, $b2Tests->first());
-
-        // Le clic sur la carte B2 lance alors le SUIVANT test non tenté.
         $this->actingAs($this->user)
-            ->post(route('preparation.start', 'B2'))
-            ->assertRedirect();
+            ->post(route('preparation.generate', 'B1'))
+            ->assertNotFound();
 
-        $attempt = Attempt::latest('id')->first();
-        $this->assertSame($b2Tests[1]->id, $attempt->modell_test_id);
-        $this->assertSame($this->user->id, $attempt->user_id);
+        // Sans clé IA : la demande est créée puis échoue proprement (job sync).
+        $response = $this->actingAs($this->user)
+            ->post(route('preparation.generate', 'C1'));
+        $response->assertRedirect(route('challenges.index'));
     }
 
-    public function test_audio_part_is_fixed_and_text_part_is_a_four_question_form(): void
+    public function test_c1_tasks_use_timed_forms(): void
     {
         $engine = app(ExamService::class);
-        $other = $this->candidate();
+        $attempt = $engine->startAttempt($this->user, $this->c1Test());
 
-        $first = $engine->startAttempt($this->user, $this->c1Test());
-        $second = $engine->startAttempt($other, $this->c1Test());
+        $tasks = $attempt->attemptExercises()->orderBy('position')->get();
+        $this->assertCount(3, $tasks);
 
-        $audioIds1 = $first->attemptExercises
-            ->filter(fn ($ae) => $ae->exercise->skill->value === 'hoeren')
-            ->flatMap(fn ($ae) => $ae->formQuestions()->pluck('id'))
-            ->values();
-        $audioIds2 = $second->attemptExercises
-            ->filter(fn ($ae) => $ae->exercise->skill->value === 'hoeren')
-            ->flatMap(fn ($ae) => $ae->formQuestions()->pluck('id'))
-            ->values();
+        // Formats 3/1/3, toutes les questions chronométrées.
+        $this->assertSame([3, 1, 3], $tasks->map(fn ($ae) => count($ae->question_form))->all());
 
-        // Partie audio FIXE : mêmes questions pour les deux candidats
-        // (5 QCM de la démo 1 + 1 grande question de la démo 7).
-        $this->assertCount(6, $audioIds1);
-        $this->assertSame($audioIds1->all(), $audioIds2->all());
-
-        // Partie texte : forme de 4 questions tirées du pool (8 au total).
-        $reading = $first->attemptExercises
-            ->first(fn ($ae) => $ae->exercise->skill->value === 'lesen');
-
-        $this->assertSame(8, $reading->exercise->questions()->count());
-        $this->assertCount(4, $reading->formQuestions());
-
-        // Minuteur par partie actif sur la partie texte (questions chronométrées).
-        $this->assertNotNull($reading->exercise->duration_seconds);
-        $this->assertTrue($reading->formQuestions()->every(
-            fn ($q) => $q->time_limit_seconds > 0
-        ));
+        foreach ($tasks as $task) {
+            $this->assertTrue($task->formQuestions()->every(
+                fn ($q) => $q->time_limit_seconds > 0
+            ));
+        }
     }
 
-    public function test_full_c1_run_scores_each_part_and_the_results_page_shows_improvements(): void
+    public function test_full_c1_run_scores_and_shows_results(): void
     {
         $engine = app(ExamService::class);
         $answers = app(AnswerService::class);
@@ -178,16 +144,13 @@ class LevelTestFlowTest extends TestCase
         $attempt = $attempt->fresh();
         $this->assertSame(AttemptStatus::Completed, $attempt->status);
 
-        // Score par partie : Hörverstehen (6 points) + Leseverstehen (4 points).
+        // Score Lesen : 3 (QCM) + 2 (trous) + 3 (vrai/faux) = 8 points.
         $results = $attempt->results()->get()->keyBy(fn ($r) => $r->skill->value);
-        $this->assertArrayHasKey('hoeren', $results);
         $this->assertArrayHasKey('lesen', $results);
-        $this->assertEquals(6.0, (float) $results['hoeren']->max_points);
-        $this->assertEquals(4.0, (float) $results['lesen']->max_points);
-        $this->assertEquals(6.0, (float) $results['hoeren']->points);
-        $this->assertEquals(4.0, (float) $results['lesen']->points);
+        $this->assertEqualsWithDelta(8.0, (float) $results['lesen']->max_points, 0.01);
+        $this->assertEqualsWithDelta(8.0, (float) $results['lesen']->points, 0.01);
 
-        // Page résultats : score par partie + résumé des points à améliorer.
+        // Page résultats : score par partie + points à améliorer.
         $this->actingAs($this->user)
             ->get(route('results.show', $attempt))
             ->assertOk()

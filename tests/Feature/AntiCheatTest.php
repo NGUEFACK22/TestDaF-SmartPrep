@@ -10,7 +10,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Services\Exam\AnswerService;
 use App\Services\Exam\ExamService;
-use Database\Seeders\ModellTestSeeder;
+use Database\Seeders\LevelTrackSeeder;
 use Database\Seeders\RoleSeeder;
 use Database\Seeders\SettingSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -25,7 +25,7 @@ class AntiCheatTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed([RoleSeeder::class, SettingSeeder::class, ModellTestSeeder::class]);
+        $this->seed([RoleSeeder::class, SettingSeeder::class, LevelTrackSeeder::class]);
         $this->user = User::factory()->create();
     }
 

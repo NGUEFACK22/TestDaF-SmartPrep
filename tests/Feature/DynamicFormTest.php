@@ -3,31 +3,30 @@
 namespace Tests\Feature;
 
 use App\Enums\AttemptStatus;
-use App\Enums\Skill;
-use App\Exceptions\ExamException;
 use App\Models\Attempt;
 use App\Models\AttemptExercise;
+use App\Models\Exercise;
 use App\Models\ModellTest;
 use App\Models\Question;
 use App\Models\Role;
+use App\Models\Section;
 use App\Models\User;
 use App\Services\Exam\AnswerService;
 use App\Services\Exam\ExamService;
 use App\Services\Exam\FormService;
-use Database\Seeders\ModellTestSeeder;
+use Database\Seeders\LevelTrackSeeder;
 use Database\Seeders\RoleSeeder;
 use Database\Seeders\SettingSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Collection;
 use Tests\TestCase;
 
 /**
- * DynamicFormTest — moteur de formes de questions dynamiques.
+ * DynamicFormTest — formes de questions dynamiques (100 % QCM écrit).
  *
- * Garanties vérifiées :
+ * Garanties vérifiées sur le parcours C1 (3 tâches : QCM + Lückentext +
+ * vrai/faux, formes 4/1/3) :
  *  - à chaque tentative, les questions changent (anti-répétition) ;
- *  - le format reste constant (même nombre et types de questions) ;
- *  - la difficulté est calibrée au-dessus du niveau officiel (biais C1/C1+) ;
+ *  - le format reste constant (même nombre de questions) ;
  *  - anti-cheat : seules les questions de la forme peuvent être
  *    répondues et corrigées.
  */
@@ -43,11 +42,11 @@ class DynamicFormTest extends TestCase
     {
         parent::setUp();
 
-        $this->seed([RoleSeeder::class, SettingSeeder::class, ModellTestSeeder::class]);
+        $this->seed([RoleSeeder::class, SettingSeeder::class, LevelTrackSeeder::class]);
 
         $role = Role::where('slug', 'candidate')->first();
         $this->user = User::factory()->create(['role_id' => $role->id]);
-        $this->test = ModellTest::where('number', 1)->first();
+        $this->test = ModellTest::where('number', LevelTrackSeeder::C1_TEST_NUMBER)->first();
     }
 
     /** Termine rapidement une tentative en cours. */
@@ -67,7 +66,7 @@ class DynamicFormTest extends TestCase
 
     // ------------------------------------------------------------- format
 
-    public function test_form_is_generated_with_constant_format_on_every_attempt_type(): void
+    public function test_form_is_generated_with_constant_format(): void
     {
         $attempt = app(ExamService::class)->startAttempt($this->user, $this->test);
 
@@ -75,7 +74,7 @@ class DynamicFormTest extends TestCase
             ->filter(fn (AttemptExercise $ae) => $ae->question_form !== null)
             ->values();
 
-        // Lesen (QCM + Lückentext) et Hören sont variabilisables.
+        // C1 : QCM (4) + Lückentext (1) + vrai/faux (3).
         $this->assertSame(3, $withForm->count());
 
         foreach ($withForm as $ae) {
@@ -101,13 +100,6 @@ class DynamicFormTest extends TestCase
                 $this->assertSame((int) $ae->exercise_id, (int) $q->exercise_id);
             }
         }
-
-        // Les tâches de production (Schreiben/Sprechen) ne sont pas modifiées.
-        foreach ($attempt->attemptExercises as $ae) {
-            if ($ae->exercise->skill->isProductive()) {
-                $this->assertNull($ae->question_form);
-            }
-        }
     }
 
     // ------------------------------------------------------------- nouveauté
@@ -130,8 +122,8 @@ class DynamicFormTest extends TestCase
             $this->assertSame(AttemptStatus::Completed, $attempt->fresh()->status);
         }
 
-        // Aucune forme n'est identique à la précédente sur les 3 tentatives
-        // (pools 6/4/4, exclusion des 2 dernières tentatives).
+        // Aucune forme n'est identique à la précédente (exclusion des
+        // 2 dernières tentatives, pools plus grands que les formes).
         foreach ([1, 2] as $i) {
             foreach ($forms[$i] as $exerciseId => $current) {
                 $previous = $forms[$i - 1][$exerciseId] ?? [];
@@ -179,34 +171,19 @@ class DynamicFormTest extends TestCase
             }
         }
 
-        // P(item B2 présent dans un tirage de 3) ≈ 1 − (20/21)³ ≈ 14,5 %.
-        // Sur 60 tirages → ~9 ocorrances attendues ; le seuil 25 est large.
         $this->assertLessThan(25, $b2Hits, "Biais difficulté inopinant (B2 tiré {$b2Hits}/{$draws}).");
         $this->assertGreaterThan(0, $draws);
     }
 
-    public function test_question_pools_are_calibrated_c1_or_higher(): void
+    public function test_c1_pools_are_calibrated_c1_or_higher(): void
     {
-        // Vérification du contenu : les pools Lesen/Hören des 10 tests sont
-        // étiquetés C1/C1+ — difficulté supérieure au niveau officiel.
-        foreach (ModellTest::all() as $test) {
-            $lesen = $test->sections()->where('skill', Skill::Lesen->value)->first();
-            foreach ($lesen->exercises as $exercise) {
-                foreach ($exercise->questions as $q) {
-                    $this->assertContains(
-                        $q->difficulty,
-                        ['C1', 'C1+'],
-                        "Question #{$q->id} (test {$test->number}) sous le niveau officiel ({$q->difficulty})."
-                    );
-                }
-            }
-
-            $hoeren = $test->sections()->where('skill', Skill::Hoeren->value)->first()->exercises->first();
-            foreach ($hoeren->questions as $q) {
+        // Toutes les questions du parcours C1 sont étiquetées C1/C1+.
+        foreach ($this->test->sections()->where('skill', 'lesen')->first()->exercises as $exercise) {
+            foreach ($exercise->questions as $q) {
                 $this->assertContains(
                     $q->difficulty,
                     ['C1', 'C1+'],
-                    "Hören #{$q->id} (test {$test->number}) sous le niveau officiel."
+                    "Question #{$q->id} sous le niveau C1 ({$q->difficulty})."
                 );
             }
         }
@@ -227,7 +204,7 @@ class DynamicFormTest extends TestCase
             ->whereNotIn('id', $ae->formIds())
             ->firstOrFail();
 
-        $this->expectException(ExamException::class);
+        $this->expectException(\App\Exceptions\ExamException::class);
         $answers->save($attempt, $ae, $hidden, ['A']);
     }
 
@@ -262,39 +239,54 @@ class DynamicFormTest extends TestCase
         $this->assertSame(0, $attempt->answers()->whereIn('question_id', $hiddenIds)->count());
     }
 
-    public function test_attempt_without_form_falls_back_to_all_questions(): void
+    public function test_exercise_without_form_falls_back_to_all_questions(): void
     {
-        // Les tâches sans questions_per_form (production) gardent
-        // leur comportement legacy : toutes les questions.
-        $attempt = app(ExamService::class)->startAttempt($this->user, $this->test);
+        // Une tâche sans questions_per_form utilise tout son pool (legacy).
+        $test = ModellTest::create([
+            'number' => 90, 'title' => 'T', 'difficulty' => 'B1', 'status' => 'published',
+        ]);
+        $section = Section::create([
+            'modell_test_id' => $test->id, 'skill' => 'lesen',
+            'title' => 'Lesen', 'position' => 0, 'status' => 'published',
+        ]);
+        $exercise = Exercise::create([
+            'skill' => 'lesen', 'type' => 'multiple_choice', 'title' => 'E',
+            'level' => 'B1', 'difficulty' => 'B1', 'duration_seconds' => 300,
+            'position' => 0, 'content' => ['text' => 'Text.'], 'status' => 'published',
+        ]);
+        $section->exercises()->attach($exercise->id, ['position' => 0]);
+        Question::create([
+            'exercise_id' => $exercise->id, 'type' => 'single_choice', 'position' => 0,
+            'prompt' => 'Q ?', 'points' => 1, 'correct_answer' => ['A'],
+        ]);
 
-        $writing = $attempt->attemptExercises
-            ->first(fn (AttemptExercise $ae) => $ae->exercise->skill === Skill::Schreiben);
+        $attempt = app(ExamService::class)->startAttempt($this->user, $test);
+        $ae = $attempt->attemptExercises()->first();
 
-        $this->assertNull($writing->formIds());
+        $this->assertNull($ae->formIds());
         $this->assertSame(
-            $writing->exercise->questions()->count(),
-            $writing->formQuestions()->count()
+            $exercise->questions()->count(),
+            $ae->formQuestions()->count()
         );
     }
 
     // ------------------------------------------------------------- contenu
 
-    public function test_luecken_answers_are_specific_to_each_test(): void
+    public function test_luecken_answers_differ_between_b2_and_c1(): void
     {
-        // Régression : le corrigé du Lückentext ne doit plus être
-        // hardcodé sur le test 1 pour les 10 tests.
-        $answers = [];
+        // Les corrigés du Lückentext sont spécifiques à chaque niveau.
+        $get = function (int $number) {
+            $test = ModellTest::where('number', $number)->firstOrFail();
 
-        foreach (ModellTest::orderBy('number')->get() as $test) {
-            $luecken = $test->sections->firstWhere('skill', Skill::Lesen->value)
+            return $test->sections->firstWhere('skill', 'lesen')
                 ->exercises
-                ->firstWhere('type', 'lueckentext_ergaenzen');
+                ->firstWhere('type', 'lueckentext_ergaenzen')
+                ->questions
+                ->pluck('correct_answer')
+                ->map(fn ($a) => json_encode(array_values((array) $a)))
+                ->all();
+        };
 
-            $answers[] = $luecken->questions->first()->correct_answer;
-        }
-
-        // 10 tests → au moins 6 corrigés distincts.
-        $this->assertGreaterThanOrEqual(6, collect($answers)->unique()->count());
+        $this->assertNotSame($get(4), $get(LevelTrackSeeder::C1_TEST_NUMBER));
     }
 }

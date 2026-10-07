@@ -4,17 +4,12 @@ namespace App\Services\Exam;
 
 use App\Enums\AttemptStatus;
 use App\Enums\ExerciseState;
-use App\Enums\Skill;
 use App\Exceptions\ExamException;
-use App\Jobs\ProcessSpeakingSubmission;
-use App\Jobs\ProcessWritingSubmission;
 use App\Models\Attempt;
 use App\Models\AttemptExercise;
 use App\Models\ExamLog;
 use App\Models\ModellTest;
-use App\Models\SpeakingSubmission;
 use App\Models\User;
-use App\Models\WritingSubmission;
 use App\Services\Statistics\StatisticsService;
 use Illuminate\Support\Facades\DB;
 
@@ -426,7 +421,6 @@ class ExamService
 
         $this->timer->stop($ae, $expired);
         $this->scoring->scoreObjective($attempt, $ae->refresh());
-        $this->finalizeProductive($attempt, $ae);
         $this->activateNext($attempt);
 
         return $attempt->refresh()->currentExercise();
@@ -496,60 +490,6 @@ class ExamService
             'remaining' => $total - $done,
             'percent' => $total > 0 ? round(($done / $total) * 100, 1) : 0.0,
         ];
-    }
-
-    /**
-     * Clôture les productions Schreiben/Sprechen à la fin de la tâche :
-     * la soumission existante est figée (même à l'expiration) et l'analyse
-     * IA est mise en file si elle est activée. Aucune réponse n'est perdue.
-     */
-    public function finalizeProductive(Attempt $attempt, AttemptExercise $ae): void
-    {
-        $skill = $ae->exercise->skill;
-
-        if ($skill === Skill::Schreiben) {
-            $submission = WritingSubmission::query()
-                ->where('attempt_id', $attempt->id)
-                ->where('attempt_exercise_id', $ae->id)
-                ->latest('id')
-                ->first();
-
-            if ($submission && ! $submission->locked) {
-                $submission->update([
-                    'submitted_at' => $submission->submitted_at ?? now(),
-                    'locked' => true,
-                ]);
-            }
-
-            if ($submission && $this->aiAutoEvaluation()) {
-                ProcessWritingSubmission::dispatch($submission->id);
-            }
-        }
-
-        if ($skill === Skill::Sprechen) {
-            $submission = SpeakingSubmission::query()
-                ->where('attempt_id', $attempt->id)
-                ->where('attempt_exercise_id', $ae->id)
-                ->latest('id')
-                ->first();
-
-            if ($submission && ! $submission->locked) {
-                $submission->update([
-                    'submitted_at' => $submission->submitted_at ?? now(),
-                    'locked' => true,
-                ]);
-            }
-
-            if ($submission && $this->aiAutoEvaluation()) {
-                ProcessSpeakingSubmission::dispatch($submission->id);
-            }
-        }
-    }
-
-    private function aiAutoEvaluation(): bool
-    {
-        return (bool) config('testdaf.ai.enabled')
-            && (bool) config('testdaf.ai.auto_evaluation');
     }
 
     private function log(Attempt $attempt, string $event, array $payload = []): void

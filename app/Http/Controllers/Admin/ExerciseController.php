@@ -6,14 +6,11 @@ use App\Enums\Skill;
 use App\Http\Controllers\Controller;
 use App\Models\Exercise;
 use App\Models\Question;
-use App\Services\Media\MediaService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class ExerciseController extends Controller
 {
-    public function __construct(private MediaService $media) {}
-
     public function index()
     {
         return view('admin.exercises.index', [
@@ -37,14 +34,12 @@ class ExerciseController extends Controller
 
         $exercise = Exercise::create($data);
 
-        $this->attachMedia($request, $exercise);
-
         return redirect()->route('admin.exercises.edit', $exercise)->with('status', 'Exercice créé.');
     }
 
     public function edit(Exercise $exercise)
     {
-        $exercise->load('questions.answerOptions', 'media');
+        $exercise->load('questions.answerOptions');
 
         return view('admin.exercises.form', [
             'exercise' => $exercise,
@@ -57,7 +52,6 @@ class ExerciseController extends Controller
     public function update(Request $request, Exercise $exercise)
     {
         $exercise->update($this->validated($request));
-        $this->attachMedia($request, $exercise);
         $this->syncQuestions($request, $exercise);
 
         return back()->with('status', 'Exercice mis à jour.');
@@ -76,8 +70,8 @@ class ExerciseController extends Controller
             'skill' => ['required', Rule::in(array_column(Skill::cases(), 'value'))],
             'type' => ['required', 'string', 'max:100'],
             'title' => ['required', 'string', 'max:255'],
-            'level' => ['required', 'in:A2,B1,B2,C1'],
-            'difficulty' => ['required', 'in:A2,B1,B2,C1'],
+            'level' => ['required', 'in:A1,A2,B1,B2,C1,C2'],
+            'difficulty' => ['required', 'in:A1,A2,B1,B2,C1,C2'],
             'instruction' => ['nullable', 'string'],
             'duration_seconds' => ['required', 'integer', 'min:10', 'max:7200'],
             'preparation_seconds' => ['nullable', 'integer', 'min:0', 'max:600'],
@@ -99,15 +93,6 @@ class ExerciseController extends Controller
         unset($data['content_text'], $data['content_source_text']);
 
         return $data;
-    }
-
-    private function attachMedia(Request $request, Exercise $exercise): void
-    {
-        foreach (['audio' => 'audio', 'video' => 'video', 'image' => 'image'] as $field => $kind) {
-            if ($request->hasFile($field)) {
-                $this->media->storeContentFile($request->file($field), $kind, $exercise);
-            }
-        }
     }
 
     /** Synchronise les questions / réponses correctes (saisie simplifiée). */

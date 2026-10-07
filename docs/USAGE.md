@@ -1,4 +1,4 @@
-# Guide d'utilisation
+# Guide d'utilisation — SYNPHONIE (100 % QCM écrit, par niveau)
 
 ## 1. Candidat
 
@@ -6,65 +6,63 @@
 
 ```
 / (Accueil) → /register (inscription) → /login → /dashboard
-→ /preparation/{lesen|hoeren|schreiben|sprechen} (entraînement libre)
-→ /training/hoeren (les 7 tâches officielles Hörverstehen — démos TestDaF digital)
-
-→ /modelltests (liste des 10 tests) → /exam/{attempt} (passage)
+→ /preparation (niveaux A1 → C2 : banque QCM ou session IA)
+→ /exam/{attempt} (session chronométrée)
 → /results/{attempt} → /results/{attempt}/report (rapport détaillé)
 ```
 
 ### Tableau de bord (`/dashboard`)
 
-Progression par compétence (Lesen / Hören / Schreiben / Sprechen), dernier test, tests commencés/terminés, exercices recommandés et activités récentes.
+Niveau Lesen, tentative en cours (reprise), tests commencés/terminés, score moyen,
+exercices recommandés, bandeau Espace Élite (si débloqué).
 
-### Espaces de préparation (`/preparation/{competence}`)
+### Entraînement par niveau (`/preparation`)
 
-Cours/méthodes/conseils + exercices classés par difficulté (A2→C1). Chaque exercice s'ouvre en **mode entraînement** (`/training/exercises/{id}`) : sans chronomètre, avec indices, correction immédiate et possibilité de recommencer.
+Cartes A1 → C2. Chaque niveau propose :
+- **Banque QCM** (A1–C1) : session chronométrée, questions **tirées sans remise**
+  (différentes à chaque session, calibrées sur le cadre du niveau).
+- **Session IA inédite** (C1–C2) : minimum 20 QCM générés à la demande, calibrés
+  sur vos faiblesses, minuteur par question selon la difficulté (B2 90 s, C1 120 s, C1+ 150 s).
+- Le C1 suit le **format TestDaF** (QCM + Lückentext + vrai/faux), écrit uniquement.
 
-### Démos officielles Hören (`/training/hoeren`)
+Dernier score affiché par niveau, avec lien vers le détail.
 
-Les **7 tâches officielles Hörverstehen** du TestDaF digital (matériel pédagogique public du TestDaF Institute) : pour chaque type de tâche, écoute/visionnage de la **démo officielle** (audio ou vidéo), **consigne officielle** (DE), description et structure de la tâche (FR), durée indicative calibrée sur le fichier de démo (+ phase de vérification officielle lorsqu'elle est documentée), **conseils C1** et **ressources externes** (TestDaF, ÖSD, telc, Goethe).
+### Session d'examen (mode examen)
 
-Mode entraînement : **non noté, sans chronomètre** — ces démos ne font partie d'aucun Modelltest. Import : `php artisan db:seed --class=HoerenDemoSeeder` (fichiers dans `content/media/hoeren_demo/`, seeder idempotent).
-
-### Passer un Modelltest (mode examen)
-
-1. `/modelltests` → choisir **Modelltest N** → bouton **Commencer le Modelltest** (confirmation : « ce mode reproduit les conditions d'un examen numérique »).
-2. La tentative est créée côté serveur ; le parcours s'enchaîne : **Lesen → Hören → Schreiben → Sprechen**.
-3. Interface d'examen : en-tête (`TESTDAF / Lesen / Aufgabe 3 von 7`), **chronomètre** de la tâche, barre de progression, consigne, contenu (texte/audio/vidéo/sujet), zone de réponses, bouton **Weiter**.
+1. Carte niveau → **S'entraîner** (banque) ou **Générer une session IA** → tentative
+   créée côté serveur → `/exam/{attempt}`.
+2. Interface : en-tête (`SYNPHONIE / Lesen / Aufgabe X`), **chronomètre** de la tâche,
+   barre de progression globale, consigne, texte, Fragen numérotées (`Frage 1 / N`
+   + pastille `· En attente` / `✓ Répondu`), boutons **SUIVANT** / **WEITER**.
 
 Règles du moteur d'examen (le serveur est l'autorité) :
 
 - Chaque **Aufgabe** a sa propre durée (en base). Le compte à rebours s'affiche ; à **30 s** reste, alerte visuelle.
+- Cliquer SUIVANT/WEITER ouvre une **fenêtre de confirmation** (temps restant + état des réponses). Oui = on avance, Non = on reste.
 - **Si vous validez avant la fin** : réponses sauvegardées, tâche verrouillée définitivement, le temps restant est perdu, tâche suivante démarrée immédiatement.
-- **Si le temps arrive à 00:00** : « Die Bearbeitungszeit ist abgelaufen. » — réponses sauvegardées, tâche verrouillée, passage automatique à la suivante.
-- **Retour en arrière impossible** (bouton précédent désactivé ; le serveur refuse tout accès à une tâche antérieure, expirée ou future).
+- **Si le temps arrive à 00:00** : « Die Bearbeitungszeit ist abgelaufen. » — réponses sauvegardées, tâche verrouillée, passage automatique à la suivante. Les champs se grisent.
+- **Retour en arrière impossible** (le serveur refuse tout accès à une tâche antérieure, expirée ou future).
 - **Réseau coupé / onglet fermé** : l'état est côté serveur. En reprenant, le serveur recalcule le temps restant (ou verrouille et passe à la suite si expiré).
-- Les réponses texte (Lesen, Kurzantwort) sont **autosauvegardées toutes les 10 s** — refusées par le serveur si la tâche est expirée.
-
-### Hören
-
-Le **Hörtext** est joué dans un **lecteur audio** (audio synthétique de la transcription originale, voix allemande `de-DE`) ; le transkript est affiché sous le lecteur. L'audio est servi depuis le **stockage privé** via `/media/{id}` (session requise, jamais de URL publique directe).
-
-### Schreiben
-
-Éditeur de texte avec **compteur de mots**, affichage du sujet + texte source + **graphique** (bar chart Chart.js des données de la « Grafik »), autosave silencieux, fin automatique et **verrouillage du champ** à l'échéance.
-
-### Sprechen
-
-Le navigateur demande l'autorisation du **microphone** (Page non sécurisée → autoriser ; ne fonctionne que sur HTTPS ou `127.0.0.1`). Séquence : consigne (audio/vidéo possible) → **temps de préparation** → enregistrement (barre de temps restant) → arrêt automatique à l'échéance. Avant validation, vous pouvez **réécouter** et **refaire** l'enregistrement ; après validation, il est définitif. Le fichier (WebM) est envoyé vers le stockage privé du serveur.
-
-> Formats acceptés (Sprechen) : `audio/webm`, `ogg`, `mp3`, `wav`, `m4a` — max **20 Mo**. Vidéo : `webm`, `mp4`, `ogv`, `mov` — max **100 Mo**.
+- Les réponses sont **autosauvegardées** (toutes les 10 s + à chaque saisie) — refusées par le serveur si la tâche est expirée, avec message explicite.
 
 ### Résultats et rapport
 
-- `/results/{attempt}` : par section — points, pourcentage, bonnes/mauvaises réponses avec **explication pédagogique** (« Votre réponse : B — Bonne réponse : C — Pourquoi : … — Conseil : … »), commentaires IA et correcteur, statut des analyses (« Analyse en cours… » → disponible).
-- `/results/{attempt}/report` : résumé global, erreurs fréquentes, points forts/à améliorer, recommandations, évolution, temps utilisé.
-- Les scores IA sont des **évaluations pédagogiques indicatives**, pas des notes officielles TestDaF.
+- `/results/{attempt}` : score, pourcentage, note /20 et TDN estimé, score par partie,
+  points à améliorer, correction détaillée avec **explication pédagogique**
+  (« Votre réponse : B — Bonne réponse : C — Pourquoi : … »).
+- `/results/{attempt}/report` : résumé global, erreurs fréquentes, évolution, temps utilisé.
+- `/results/{attempt}/pdf` : version imprimable (export PDF via le navigateur).
+- Les scores sont des **évaluations pédagogiques indicatives**, pas des notes officielles TestDaF.
+
+### Espace Élite — Défi IA (`/challenges`)
+
+Deux scores parfaits (100 %) d'affilée sur un même niveau débloquent des défis IA
+supplémentaires (min 20 QCM inédits, calibrés sur vos erreurs). Notification +
+bandeau dashboard. Génération en file d'attente (actualisation auto).
 
 ### Notifications
 
-`/notifications` : nouveau Modelltest disponible, correction disponible, analyse IA terminée, message administrateur.
+`/notifications` : Espace Élite débloqué, défi IA prêt, message administrateur.
 
 ## 2. Administrateur
 
@@ -72,22 +70,14 @@ Accès : `/admin` (rôle `admin` requis — middleware `role:admin`).
 
 ### Dashboard (`/admin`)
 
-Utilisateurs, tentatives, tests terminés, exercices réalisés, score moyen par compétence, demandes de correction, analyses IA (ok / erreurs), stockage média, activité récente.
-
-### Gestion des Modelltests (`/admin/modelltests`)
-
-- **CRUD** complet : titre, thème, description, ordre, statut (brouillon / publié).
-- Ajout des 4 sections (Lesen, Hören, Schreiben, Sprechen) avec leur **ordre** et leurs **Aufgaben** (exercices de la bibliothèque), chaque tâche avec sa **durée** (`duration_seconds`).
-- Ajout des **questions**, **options**, **bonne réponse**, **points**, **explication**.
-- **Publication** : le système contrôle la complétude (toutes les tâches présentes, questions valides, bonnes réponses définies, durées, solutions) avant de passer au statut « publié ».
+Utilisateurs, tests de niveau publiés, exercices QCM, tentatives en cours,
+Espaces Élite débloqués, défis IA (prêts / échoués), score moyen, activité récente.
 
 ### Gestion des exercices (`/admin/exercises`)
 
-Bibliothèque d'exercices réutilisables : titre, section, type (famille TestDaF), niveau (A2–C1), consigne, durée, points, difficulté, texte, médias (audio/vidéo/image/graphique en upload privé), statut de publication.
-
-### Corrections manuelles (`/admin/corrections`)
-
-Liste des productions **Schreiben** et **Sprechen** à corriger. Pour chacune : consultation de la consigne, lecture de la réponse / **écoute audio** / visionnage vidéo, **attribution des points** (grille 0–20 par critère), **commentaire**, validation. Le candidat est notifié.
+Bibliothèque d'exercices QCM réutilisables : titre, type (famille TestDaF Lesen),
+niveau (A1–C2), consigne, durée, points, difficulté, texte, questions, options,
+bonne réponse, explication, statut de publication. 100 % texte — aucun média.
 
 ### Utilisateurs (`/admin/users`)
 
@@ -95,12 +85,14 @@ Liste des comptes, rôles (candidat / admin), statut (actif / bloqué). Modifier
 
 ### Paramètres IA (`/admin/settings`)
 
-`ai_enabled`, `ai_provider`, `ai_model`, `max_ai_requests`, `ai_auto_evaluation`, `ai_manual_review` (miroir des variables `.env` correspondantes). Les quotas s'appliquent ; en échec API, l'analyse passe en « en attente » sans perte de la réponse et reste rejouable.
+`ai_enabled`, `ai_provider`, `ai_model`, `max_ai_requests` (quota journalier de
+générations, défaut 100). En échec API, la génération passe en « échouée » avec
+message, rejouable. Les secrets restent dans `.env`, jamais exposés au navigateur.
 
 ## 3. Sécurité (points à retenir)
 
-- **Jamais de confiance au navigateur** : identité, rôles, tentatives, temps, états, réponses, scores, fichiers et IA sont validés côté serveur (Laravel).
-- Toute réponse envoyée est re-checkée : utilisateur possesseur de la tentative, tâche autorisée (ordre), non expirée, non verrouillée.
-- Les médias candidats sont en **stockage privé** (`storage/app/private/candidate_audio|video/...`) et servis par streaming contrôlé — jamais de URL publique directe, jamais d'exécution de fichier uploadé.
-- Rate limiting sur les routes d'envoi (réponses 180/min, audio 30/min, IA 20/min).
-- Les clés API (Gemini / Whisper / Speechace) ne sont jamais exposées au navigateur.
+- **Jamais de confiance au navigateur** : identité, rôles, tentatives, temps, états, réponses, scores et IA sont validés côté serveur (Laravel).
+- Toute réponse envoyée est re-checkée : utilisateur possesseur de la tentative, question de la forme active et courante, non expirée, non verrouillée.
+- Rate limiting sur les routes d'envoi (réponses 180/min, IA 5/min, login 5/min).
+- Les clés API (Gemini) ne sont jamais exposées au navigateur.
+- Commandes RGPD : `synphonie:purge` (vieux logs), export + suppression de compte côté candidat.

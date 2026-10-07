@@ -9,9 +9,7 @@ use App\Models\User;
 use App\Models\UserAnswer;
 use App\Services\Exam\AnswerService;
 use App\Services\Exam\ExamService;
-use Database\Seeders\HoerenDemoSeeder;
-use Database\Seeders\LevelTestSeeder;
-use Database\Seeders\ModellTestSeeder;
+use Database\Seeders\LevelTrackSeeder;
 use Database\Seeders\RoleSeeder;
 use Database\Seeders\SettingSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -38,9 +36,7 @@ class ExamSyncTest extends TestCase
         $this->seed([
             RoleSeeder::class,
             SettingSeeder::class,
-            ModellTestSeeder::class,
-            HoerenDemoSeeder::class,
-            LevelTestSeeder::class,
+            LevelTrackSeeder::class,
         ]);
 
         $role = Role::where('slug', 'candidate')->first();
@@ -49,36 +45,16 @@ class ExamSyncTest extends TestCase
 
     private function c1Test(): ModellTest
     {
-        return ModellTest::where('number', LevelTestSeeder::C1_TEST_NUMBER)->firstOrFail();
+        return ModellTest::where('number', LevelTrackSeeder::C1_TEST_NUMBER)->firstOrFail();
     }
 
-    /**
-     * Démarre le test C1 et fait passer la partie Hören (2 tâches)
-     * pour que la tâche Lesen (questions chronométrées) soit courante.
-     */
+    /** Démarre le test C1 et sa première tâche QCM chronométrée. */
     private function readingTask(): array
     {
         $engine = app(ExamService::class);
-        $answers = app(AnswerService::class);
 
         $attempt = $engine->startAttempt($this->user, $this->c1Test());
-
-        foreach ($attempt->attemptExercises()->orderBy('position')->get() as $task) {
-            if ($task->exercise->skill->value !== 'hoeren') {
-                continue;
-            }
-
-            $engine->startExercise($attempt->fresh(), $task->exercise_id);
-
-            foreach ($task->fresh()->formQuestions() as $question) {
-                $answers->save($attempt->fresh(), $task->fresh(), $question, (array) $question->correct_answer);
-                $engine->advanceQuestion($attempt->fresh(), $task->fresh());
-            }
-        }
-
-        $reading = $attempt->fresh()
-            ->attemptExercises
-            ->first(fn ($ae) => $ae->exercise->skill->value === 'lesen');
+        $reading = $attempt->attemptExercises()->orderBy('position')->first();
 
         $engine->startExercise($attempt->fresh(), $reading->exercise_id);
 

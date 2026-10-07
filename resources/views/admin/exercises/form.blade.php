@@ -66,7 +66,7 @@
             <div>
                 <label class="block text-sm font-medium mb-1">Niveau</label>
                 <select name="level" class="w-full rounded-lg border border-slate-300 px-3 py-2">
-                    @foreach (['A2', 'B1', 'B2', 'C1'] as $level)
+                    @foreach (['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as $level)
                         <option value="{{ $level }}" @selected(old('level', $exercise->level) === $level)>{{ $level }}</option>
                     @endforeach
                 </select>
@@ -78,26 +78,6 @@
                         <option value="{{ $value }}" @selected(old('status', $exercise->status) === $value)>{{ $label }}</option>
                     @endforeach
                 </select>
-            </div>
-        </div>
-
-        <div>
-            <label class="block text-sm font-medium mb-1">Texte source (Schreiben)</label>
-            <textarea name="content_source_text" rows="4" class="w-full rounded-lg border border-slate-300 px-3 py-2">{{ old('content_source_text', $exercise->content['source_text'] ?? '') }}</textarea>
-        </div>
-
-        <div class="grid md:grid-cols-3 gap-4">
-            <div>
-                <label class="block text-sm font-medium mb-1">Audio</label>
-                <input name="audio" type="file" accept="audio/*" class="text-sm">
-            </div>
-            <div>
-                <label class="block text-sm font-medium mb-1">Vidéo</label>
-                <input name="video" type="file" accept="video/*" class="text-sm">
-            </div>
-            <div>
-                <label class="block text-sm font-medium mb-1">Image / graphique</label>
-                <input name="image" type="file" accept="image/*" class="text-sm">
             </div>
         </div>
 

@@ -2,32 +2,29 @@
 
 namespace App\Enums;
 
+/**
+ * Plateforme 100 % QCM écrit : seule la compétence Lesen subsiste
+ * (les tâches audio — Hören, Sprechen — et la rédaction — Schreiben —
+ * ont été retirées).
+ */
 enum Skill: string
 {
     case Lesen = 'lesen';
-    case Hoeren = 'hoeren';
-    case Schreiben = 'schreiben';
-    case Sprechen = 'sprechen';
 
     public function label(): string
     {
-        return match ($this) {
-            self::Lesen => 'Lesen',
-            self::Hoeren => 'Hören',
-            self::Schreiben => 'Schreiben',
-            self::Sprechen => 'Sprechen',
-        };
+        return 'Lesen';
     }
 
-    /** Ordre imposé du Modelltest. */
+    /** Ordre imposé du parcours (une seule compétence). */
     public static function sequence(): array
     {
-        return [self::Lesen, self::Hoeren, self::Schreiben, self::Sprechen];
+        return [self::Lesen];
     }
 
-    /** Compétence nécessitant une évaluation IA / manuelle. */
+    /** Plus aucune compétence productive (rédaction / oral supprimés). */
     public function isProductive(): bool
     {
-        return in_array($this, [self::Schreiben, self::Sprechen], true);
+        return false;
     }
 }

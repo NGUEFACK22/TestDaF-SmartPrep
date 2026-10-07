@@ -60,14 +60,6 @@ return [
             'report' => false,
         ],
 
-        // Fichiers en base de données (driver custom, 100 % Neon).
-        // TESTDAF_MEDIA_DISK=database pour l'utiliser (lent mais gratuit).
-        'database' => [
-            'driver' => 'database',
-            'throw' => false,
-            'report' => false,
-        ],
-
     ],
 
     /*

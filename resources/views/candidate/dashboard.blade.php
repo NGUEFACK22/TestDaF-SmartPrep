@@ -5,7 +5,7 @@
 @section('content')
     @php
         use App\Support\Format;
-        $colors = ['lesen' => '#2563eb', 'hoeren' => '#0ea5e9', 'schreiben' => '#14b8a6', 'sprechen' => '#8b5cf6'];
+        $colors = ['lesen' => '#2563eb'];
         $barSeries = [
             'labels' => collect($skillProgress)->pluck('label')->values(),
             'values' => collect($skillProgress)->pluck('percentage')->map(fn ($v) => (float) $v)->values(),
@@ -26,8 +26,8 @@
             <h1 class="text-2xl font-bold">Bonjour {{ auth()->user()->name }}</h1>
             <p class="text-sm text-slate-500">Votre progression vers le TestDaF digital.</p>
         </div>
-        <a href="{{ route('modelltests.index') }}" class="rounded-lg bg-blue-600 text-white px-4 py-2.5 font-medium hover:bg-blue-700">
-            Nouveau Modelltest
+        <a href="{{ route('preparation.index') }}" class="rounded-lg bg-blue-600 text-white px-4 py-2.5 font-medium hover:bg-blue-700">
+            S'entraîner par niveau
         </a>
     </div>
 
@@ -107,10 +107,10 @@
         </div>
         <div class="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col justify-between gap-3">
             <div>
-                <div class="text-sm text-slate-400">Entraînement officiel</div>
-                <div class="text-2xl font-bold">Hören — 7 démos</div>
+                <div class="text-sm text-slate-400">Entraînement par niveau</div>
+                <div class="text-2xl font-bold">QCM A1 → C2</div>
             </div>
-            <a href="{{ route('training.hoeren') }}" class="text-sm text-blue-600 hover:underline">Écouter les démos officielles →</a>
+            <a href="{{ route('preparation.index') }}" class="text-sm text-blue-600 hover:underline">Choisir mon niveau →</a>
         </div>
     </div>
 

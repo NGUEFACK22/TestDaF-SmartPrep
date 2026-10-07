@@ -9,7 +9,7 @@ use App\Models\User;
 use App\Services\Exam\AnswerService;
 use App\Services\Exam\ExamService;
 use App\Services\Exam\ScoringService;
-use Database\Seeders\ModellTestSeeder;
+use Database\Seeders\LevelTrackSeeder;
 use Database\Seeders\RoleSeeder;
 use Database\Seeders\SettingSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,7 +27,7 @@ class TdnResultTest extends TestCase
     {
         parent::setUp();
 
-        $this->seed([RoleSeeder::class, SettingSeeder::class, ModellTestSeeder::class]);
+        $this->seed([RoleSeeder::class, SettingSeeder::class, LevelTrackSeeder::class]);
 
         $role = Role::where('slug', 'candidate')->first();
         $this->user = User::factory()->create(['role_id' => $role->id]);
@@ -83,27 +83,18 @@ class TdnResultTest extends TestCase
             ->assertSee('16–20 points');
     }
 
-    public function test_preparation_page_shows_c1_methodology_per_skill(): void
+    public function test_preparation_page_lists_levels_with_bank_and_ia(): void
     {
-        $this->actingAs($this->user)->get(route('preparation.show', 'lesen'))
-            ->assertOk()
-            ->assertSee('LESEN — méthode C1')
-            ->assertSee('Progression C1 — 6 niveaux')
-            ->assertSee('Mode examen');
+        $response = $this->actingAs($this->user)->get(route('preparation.index'));
 
-        $this->actingAs($this->user)->get(route('preparation.show', 'schreiben'))
-            ->assertOk()
-            ->assertSee('SCHREIBEN — méthode C1')
-            ->assertSee('minimum 200 mots');
-    }
+        $response->assertOk();
 
-    public function test_preparation_page_shows_speaking_time_targets(): void
-    {
-        $response = $this->actingAs($this->user)->get(route('preparation.show', 'sprechen'));
+        foreach (['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as $level) {
+            $response->assertSee($level);
+        }
 
-        $response->assertOk()
-            ->assertSee('SPRECHEN — méthode C1')
-            ->assertSee('00:45 de parole')   // Rat geben : 45 s
-            ->assertSee('02:30 de parole');  // Thema präsentieren : 2 min 30
+        $response->assertSee('Banque QCM', false);
+        $response->assertSee('IA inédite', false);
+        $response->assertSee('Espace Élite', false);
     }
 }

@@ -7,9 +7,7 @@ use App\Models\ModellTest;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\Exam\ExamService;
-use Database\Seeders\HoerenDemoSeeder;
-use Database\Seeders\LevelTestSeeder;
-use Database\Seeders\ModellTestSeeder;
+use Database\Seeders\LevelTrackSeeder;
 use Database\Seeders\RoleSeeder;
 use Database\Seeders\SettingSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -34,9 +32,7 @@ class C1BrowserWalkthroughTest extends TestCase
         $this->seed([
             RoleSeeder::class,
             SettingSeeder::class,
-            ModellTestSeeder::class,
-            HoerenDemoSeeder::class,
-            LevelTestSeeder::class,
+            LevelTrackSeeder::class,
         ]);
 
         $role = Role::where('slug', 'candidate')->first();
@@ -46,21 +42,12 @@ class C1BrowserWalkthroughTest extends TestCase
     public function test_browser_walkthrough_lesen_4_questions(): void
     {
         $engine = app(ExamService::class);
-        $c1 = ModellTest::where('number', LevelTestSeeder::C1_TEST_NUMBER)->firstOrFail();
+        $c1 = ModellTest::where('number', LevelTrackSeeder::C1_TEST_NUMBER)->firstOrFail();
         $attempt = $engine->startAttempt($this->user, $c1);
 
-        // Traverse les 2 tâches Hören (comme un candidat qui clique WEITER).
-        foreach ($attempt->attemptExercises()->orderBy('position')->get() as $task) {
-            if ($task->exercise->skill->value !== 'lesen') {
-                $engine->startExercise($attempt->fresh(), $task->exercise_id);
-                $engine->completeExercise($attempt->fresh(), $task->exercise_id);
-            }
-        }
-
+        // Première tâche QCM du parcours C1 (comme un candidat qui arrive dessus).
         $attempt = $attempt->fresh();
-        $lesen = $attempt->attemptExercises()
-            ->whereHas('exercise', fn ($q) => $q->where('skill', 'lesen'))
-            ->firstOrFail();
+        $lesen = $attempt->attemptExercises()->orderBy('position')->firstOrFail();
 
         // GET page d'examen (comme le navigateur) : doit démarrer le chrono.
         $this->actingAs($this->user)

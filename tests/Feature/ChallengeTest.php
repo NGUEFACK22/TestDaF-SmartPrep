@@ -12,9 +12,7 @@ use App\Services\AI\GeminiService;
 use App\Services\Challenge\ChallengeService;
 use App\Services\Exam\AnswerService;
 use App\Services\Exam\ExamService;
-use Database\Seeders\HoerenDemoSeeder;
-use Database\Seeders\LevelTestSeeder;
-use Database\Seeders\ModellTestSeeder;
+use Database\Seeders\LevelTrackSeeder;
 use Database\Seeders\RoleSeeder;
 use Database\Seeders\SettingSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -33,9 +31,7 @@ class ChallengeTest extends TestCase
         $this->seed([
             RoleSeeder::class,
             SettingSeeder::class,
-            ModellTestSeeder::class,
-            HoerenDemoSeeder::class,
-            LevelTestSeeder::class,
+            LevelTrackSeeder::class,
         ]);
 
         $role = Role::where('slug', 'candidate')->first();
@@ -44,7 +40,7 @@ class ChallengeTest extends TestCase
 
     private function c1Test(): ModellTest
     {
-        return ModellTest::where('number', LevelTestSeeder::C1_TEST_NUMBER)->firstOrFail();
+        return ModellTest::where('number', LevelTrackSeeder::C1_TEST_NUMBER)->firstOrFail();
     }
 
     /** Joue le test C1 en 100 % (toutes les réponses objectives correctes). */
@@ -160,9 +156,37 @@ class ChallengeTest extends TestCase
         $attempt = app(ExamService::class)->startAttempt($this->user, $test);
         $this->assertSame(1, $attempt->attemptExercises()->count());
 
-        // Invisible de la liste publique.
-        $list = $this->actingAs($this->user)->get(route('modelltests.index'));
-        $list->assertOk()->assertDontSee($test->title, false);
+        // Jouable via l'Espace Élite (brouillon, hors listes publiques).
+        $this->actingAs($this->user)->get(route('challenges.play', $challenge->fresh()))
+            ->assertRedirect(route('exam.show', $attempt->id));
+    }
+
+    public function test_level_generation_c2_without_unlock(): void
+    {
+        $this->mock(GeminiService::class, function ($mock) {
+            $mock->shouldReceive('enabled')->andReturn(true);
+            $mock->shouldReceive('generateJson')->once()->andReturn($this->fakeItems(20, 500));
+        });
+
+        // C2 : aucune banque, génération directe sans condition de score.
+        $challenge = app(ChallengeService::class)->requestLevelGeneration($this->user, 'C2');
+
+        $this->assertSame('C2', $challenge->level);
+        $this->assertNull($challenge->modell_test_id);
+
+        app(ChallengeService::class)->generate($challenge->fresh());
+
+        $challenge = $challenge->fresh();
+        $this->assertSame('ready', $challenge->status);
+        $this->assertSame('C2', $challenge->generatedTest->difficulty);
+
+        // B1 n'a pas de génération IA.
+        try {
+            app(ChallengeService::class)->requestLevelGeneration($this->user, 'B1');
+            $this->fail('B1 ne doit pas accepter de génération IA.');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('C1 et C2', $e->getMessage());
+        }
     }
 
     public function test_incomplete_generation_marks_failed(): void
