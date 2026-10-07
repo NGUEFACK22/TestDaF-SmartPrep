@@ -92,7 +92,92 @@ class MediaService
     {
         abort_unless(Storage::disk($media->disk)->exists($media->path), 404);
 
+        // Disque database : réponse 206 manuelle (seek audio/vidéo) en ne
+        // lisant que les morceaux chevauchants — le driver S3/local gère
+        // déjà son propre streaming via Storage::response().
+        if ($media->disk === 'database') {
+            return $this->streamDatabase($media);
+        }
+
         return Storage::disk($media->disk)->response($media->path, $media->original_name);
+    }
+
+    /**
+     * Streaming depuis la base avec support des requêtes Range (le lecteur
+     * audio du navigateur cherche par plages : sans 206, il télécharge tout).
+     */
+    private function streamDatabase(Media $media): StreamedResponse
+    {
+        $blob = \App\Models\MediaBlob::where('path', ltrim((string) $media->path, '/'))->firstOrFail();
+        $size = (int) $blob->size;
+        $mime = (string) ($blob->mime ?: $media->mime ?: 'application/octet-stream');
+
+        [$start, $length] = $this->parseRange(request()->header('Range'), $size);
+
+        $status = 200;
+        $headers = [
+            'Content-Type' => $mime,
+            'Accept-Ranges' => 'bytes',
+            'Content-Length' => $length,
+            'Content-Disposition' => 'inline; filename="'.str_replace('"', '', (string) ($media->original_name ?? 'media')).'"',
+        ];
+
+        if ($start > 0 || $length < $size) {
+            $status = 206;
+            $headers['Content-Range'] = "bytes {$start}-".($start + $length - 1)."/{$size}";
+        }
+
+        $adapter = new \App\Filesystem\DatabaseMediaAdapter();
+        $path = (string) $blob->path;
+
+        return new StreamedResponse(function () use ($adapter, $path, $start, $length) {
+            // Tranches de 2 Mo : mémoire bornée même pour une vidéo de 100 Mo.
+            $remaining = $length;
+            $offset = $start;
+
+            while ($remaining > 0) {
+                $slice = $adapter->readRange($path, $offset, min(2097152, $remaining));
+
+                if ($slice === '') {
+                    break;
+                }
+
+                echo $slice;
+                $offset += strlen($slice);
+                $remaining -= strlen($slice);
+
+                if (ob_get_level() > 0) {
+                    ob_flush();
+                }
+                flush();
+            }
+        }, $status, $headers);
+    }
+
+    /** Parse "bytes=start-end" → [start, length] (repli : tout le fichier). */
+    private function parseRange(?string $header, int $size): array
+    {
+        if ($size <= 0) {
+            return [0, 0];
+        }
+
+        if (is_string($header) && preg_match('/bytes=(\d*)-(\d*)/', $header, $m)) {
+            if ($m[1] === '' && $m[2] !== '') {
+                // Suffixe : les N derniers octets.
+                $length = min($size, (int) $m[2]);
+
+                return [$size - $length, $length];
+            }
+
+            $start = max(0, (int) $m[1]);
+            $end = $m[2] !== '' ? min($size - 1, (int) $m[2]) : $size - 1;
+
+            if ($start < $size && $end >= $start) {
+                return [$start, $end - $start + 1];
+            }
+        }
+
+        return [0, $size];
     }
 
     public function delete(Media $media): void

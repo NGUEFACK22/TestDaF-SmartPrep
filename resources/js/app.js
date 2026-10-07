@@ -1,5 +1,8 @@
 import './bootstrap';
 
+// Navigation mobile (hamburger).
+import './nav';
+
 // Bibliothèque de graphiques (tableaux de bord / statistiques).
 import Chart from 'chart.js/auto';
 window.Chart = Chart;

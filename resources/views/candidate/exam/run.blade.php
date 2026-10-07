@@ -66,12 +66,12 @@
       data-warning="{{ config('testdaf.exam.warning_seconds', 30) }}">
 
 <header class="bg-slate-900 text-white sticky top-0 z-10">
-    <div class="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between gap-4">
-        <div class="flex items-center gap-4">
+    <div class="mx-auto max-w-5xl px-4 py-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div class="flex items-center gap-2 sm:gap-4 min-w-0">
             <span class="font-bold tracking-wide">SYNPHONIE</span>
             <span class="text-slate-300">·</span>
-            <span class="font-medium">{{ $skill->label() }}</span>
-            <span class="text-slate-400 text-sm">Aufgabe {{ $indexInSection + 1 }} von {{ $sectionCount }}</span>
+            <span class="font-medium truncate">{{ $skill->label() }}</span>
+            <span class="text-slate-400 text-sm whitespace-nowrap">Aufgabe {{ $indexInSection + 1 }} von {{ $sectionCount }}</span>
         </div>
         <div class="text-right hidden sm:block">
             <div class="text-xs text-slate-400">
@@ -118,7 +118,7 @@
             <span>{{ $done }} tâche(s) terminée(s)</span>
         </div>
         <div class="h-2 rounded-full bg-slate-100 overflow-hidden">
-            <div class="h-full rounded-full bg-blue-600 transition-all" style="width: {{ $pct }}%"></div>
+            <div class="h-full rounded-full bg-blue-600 progress-animated" style="width: {{ $pct }}%"></div>
         </div>
     </div>
 
@@ -225,9 +225,9 @@
         </div>
     @endif
 
-    <div class="flex justify-end mt-6">
+    <div class="flex justify-stretch sm:justify-end mt-6">
         <button type="button" id="btn-weiter"
-            class="rounded-lg bg-blue-600 text-white px-8 py-3 font-semibold hover:bg-blue-700">
+            class="btn-exam w-full sm:w-auto rounded-lg bg-blue-600 text-white px-8 py-3 font-semibold hover:bg-blue-700">
             WEITER
         </button>
     </div>

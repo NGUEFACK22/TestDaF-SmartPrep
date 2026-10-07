@@ -48,9 +48,10 @@ services:
         value: database
       - key: QUEUE_CONNECTION
         value: database
-      # --- Stockage privé R2 (S3-compatible, 10 Go gratuits) ---
+      # --- Stockage privé 100 % Neon (driver "database", sans objet externe) ---
       - key: TESTDAF_MEDIA_DISK
-        value: s3
+        value: database
+      # --- R2/S3 (optionnel, plus tard si volume) : passer TESTDAF_MEDIA_DISK à s3 ---
       - key: AWS_ACCESS_KEY_ID
         sync: false
       - key: AWS_SECRET_ACCESS_KEY

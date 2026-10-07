@@ -190,7 +190,7 @@
         @foreach ($byDifficulty as $level => $exercises)
             <div class="mb-4">
                 <div class="text-sm font-medium text-slate-500 mb-2">Niveau {{ $level }} — {{ $exercises->count() }} exercice(s)</div>
-                <div class="grid md:grid-cols-3 gap-3">
+                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     @foreach ($exercises as $exercise)
                         <div class="bg-white border border-slate-200 rounded-xl p-4">
                             <div class="text-sm font-medium">{{ $exercise->title }}</div>

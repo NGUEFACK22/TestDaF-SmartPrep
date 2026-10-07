@@ -6,7 +6,7 @@
     <h1 class="text-2xl font-bold">Utilisateurs</h1>
 
     <div class="bg-white border border-slate-200 rounded-2xl mt-6 overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="w-full min-w-[640px] text-sm">
             <thead class="bg-slate-50 text-slate-500">
                 <tr>
                     <th class="text-left px-4 py-3">Nom</th>

@@ -20,7 +20,7 @@
         </div>
     </div>
 
-    <div class="grid md:grid-cols-4 gap-4 mt-8">
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
         @foreach (\App\Enums\Skill::sequence() as $skill)
             <div class="bg-white border border-slate-200 rounded-2xl p-5">
                 <div class="text-sm text-slate-400">Kompetenz</div>

@@ -63,13 +63,13 @@
         </div>
     @endif
 
-    <div class="grid md:grid-cols-4 gap-4 mt-6">
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
         @foreach ($skillProgress as $key => $skill)
-            <div class="bg-white border border-slate-200 rounded-2xl p-5">
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 card-hover">
                 <div class="text-sm text-slate-400">{{ $skill['label'] }}</div>
                 <div class="text-2xl font-bold text-slate-800">{{ Format::percent($skill['percentage'], 0) }}</div>
                 <div class="mt-3 h-2 rounded-full bg-slate-100 overflow-hidden">
-                    <div class="h-full rounded-full" style="width: {{ min(100, $skill['percentage']) }}%; background-color: {{ $colors[$key] }}"></div>
+                    <div class="h-full rounded-full progress-animated" style="width: {{ min(100, $skill['percentage']) }}%; background-color: {{ $colors[$key] }}"></div>
                 </div>
             </div>
         @endforeach
@@ -92,7 +92,7 @@
         </div>
     </div>
 
-    <div class="grid md:grid-cols-4 gap-4 mt-6">
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
         <div class="bg-white border border-slate-200 rounded-2xl p-5">
             <div class="text-sm text-slate-400">Tests commencés</div>
             <div class="text-2xl font-bold">{{ $overview['started'] }}</div>

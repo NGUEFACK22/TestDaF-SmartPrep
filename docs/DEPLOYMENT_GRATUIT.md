@@ -1,7 +1,8 @@
-# Déployer SYNPHONIE gratuitement (Render + Neon + R2)
+# Déployer SYNPHONIE gratuitement (Render + Neon, 100 % gratuit)
 
-Coût : **0 €** — ~20 minutes, sans serveur à administrer.
+Coût : **0 €** — ~15 minutes, sans serveur à administrer, sans objet externe.
 Fichiers déjà prêts : `Dockerfile`, `render.yaml`, `docker/`.
+Principe : base **et** fichiers dans Neon (driver `database`, morceaux base64).
 
 ## 1. Base de données gratuite — Neon (~3 min)
 
@@ -10,16 +11,17 @@ Fichiers déjà prêts : `Dockerfile`, `render.yaml`, `docker/`.
 3. Noter : **host** (endpoint `-pooler`), **database**, **user**, **password**.
 4. `DB_ENDPOINT` = premier segment du host (ex. `ep-cool-name-123456`).
 
-## 2. Stockage fichiers gratuit — Cloudflare R2 (~5 min)
+> Limite assumée : fichiers + base partagent quelques Go. Les audios/vidéos
+> chargent plus lentement qu'en objet S3. Quand ça grandit → R2 (voir § 6).
 
-Sans cela, les enregistrements audio/vidéo **disparaissent** à chaque redéploiement
-(Render gratuit = disque éphémère).
+## 2. Stockage fichiers — rien à faire (base Neon)
 
-1. Compte Cloudflare → R2 → Create bucket (ex. `synphonie-media`).
-2. R2 → Manage R2 API Tokens → Create API Token (Object Read & Write) → noter
-   **Access Key ID**, **Secret Access Key** et l'**endpoint**
-   (`https://<account-id>.r2.cloudflarestorage.com`).
-3. Pas de domaine public nécessaire : l'appli lit via `/media/{id}` (accès contrôlé).
+Les enregistrements partent en base via `TESTDAF_MEDIA_DISK=database`
+(morceaux ~1 Mo, streaming avec seek). Aucun compte supplémentaire requis.
+Si un jour le volume l'exige : créer un bucket R2, générer un token API
+(Object Read & Write, scope = le bucket), puis passer `TESTDAF_MEDIA_DISK=s3`
+avec `AWS_ACCESS_KEY_ID/SECRET/BUCKET/ENDPOINT`. L'appli lit toujours via
+`/media/{id}` (accès contrôlé), aucun changement de code.
 
 ## 3. Déploiement — Render Blueprint (~5 min + build auto)
 
@@ -31,7 +33,7 @@ Sans cela, les enregistrements audio/vidéo **disparaissent** à chaque redéplo
    - `APP_URL` : laisser vide au 1er déploiement, puis mettre l'URL Render
      (`https://synphonie.onrender.com`) et **redeploy**.
    - `DB_HOST/DB_DATABASE/DB_USERNAME/DB_PASSWORD/DB_ENDPOINT` (Neon).
-   - `AWS_*` (R2). `GEMINI_API_KEY` si analyse IA (optionnel).
+   - `GEMINI_API_KEY` si analyse IA (optionnel). `AWS_*` : seulement si R2 un jour.
 4. Deploy. La migration tourne automatiquement (`preDeployCommand`).
 
 ## 4. Contenu + admin (~3 min, Render Shell)
@@ -50,7 +52,7 @@ Ne **jamais** lancer `db:seed` complet en prod (comptes démo à mot de passe co
 - `https://…/up` → 200 (health Laravel).
 - `https://…/health` → `{"ok":true,…}` (DB + file + queue).
 - Inscription → Modelltest 1 → 1 tâche → résultats.
-- Enregistrer un audio Sprechen → réécoute OK (fichier bien sur R2).
+- Enregistrer un audio Sprechen → réécoute OK (fichier bien en base).
 
 ## Limites honnêtes du gratuit
 
@@ -58,7 +60,7 @@ Ne **jamais** lancer `db:seed` complet en prod (comptes démo à mot de passe co
 |---|---|
 | Render free s'endort après inactivité | 1er chargement ~30–60 s à froid |
 | Cron 1×/min, 1 job à la fois | analyse IA en différé (quelques minutes) |
-| R2 10 Go / Neon ~3 Go | largement suffisant pour démarrer |
+| Neon seul : base + fichiers partagent quelques Go | largement suffisant pour démarrer (audios ~Mo, pas de vidéos lourdes en masse) |
 | Pas de domaine perso en free | URL `*.onrender.com` (+ TLS inclus) |
 
 ## Quand grandir (plus tard, payant)

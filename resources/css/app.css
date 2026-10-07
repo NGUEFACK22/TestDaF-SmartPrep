@@ -11,10 +11,100 @@
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
+/* ----------------- Animations globales (sobres, désactivables) ----------------- */
+@keyframes rise-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pop-in {
+    from { opacity: 0; transform: scale(0.985); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* Entrée de page : chaque bloc monte doucement, en cascade. */
+main > * {
+    animation: rise-in 0.38s ease-out both;
+}
+
+main > *:nth-child(2) { animation-delay: 0.05s; }
+main > *:nth-child(3) { animation-delay: 0.1s; }
+main > *:nth-child(4) { animation-delay: 0.15s; }
+main > *:nth-child(5) { animation-delay: 0.2s; }
+main > *:nth-child(n+6) { animation-delay: 0.25s; }
+
+/* Cartes : soulèvement doux au survol (dashboard, préparation, défis). */
+.card-hover {
+    transition: transform 0.18s ease-out, box-shadow 0.18s ease-out;
+}
+
+.card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px -12px rgb(15 23 42 / 0.25);
+}
+
+/* Barres de progression animées (largeur via style inline). */
+.progress-animated {
+    transition: width 0.9s ease-out;
+}
+
+/* Boutons d'examen : retour tactile discret. */
+.btn-exam {
+    transition: transform 0.12s ease-out, background-color 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+
+.btn-exam:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px -8px rgb(37 99 235 / 0.6);
+}
+
+.btn-exam:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn-exam:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* Menu mobile : dépliage doux. */
+#mobile-menu {
+    transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+    transform-origin: top;
+}
+
+#mobile-menu.menu-hidden {
+    opacity: 0;
+    transform: scaleY(0.96);
+    pointer-events: none;
+}
+
+/* Accessibilité : aucun mouvement si l'utilisateur le demande. */
+@media (prefers-reduced-motion: reduce) {
+    main > *,
+    .question-block {
+        animation: none;
+    }
+
+    .card-hover:hover,
+    .btn-exam:hover:not(:disabled) {
+        transform: none;
+    }
+
+    .exam-timer-bar,
+    .progress-animated {
+        transition: none;
+    }
+}
+
 /* ----------------------------- Examen : styles ----------------------------- */
 .exam-shell {
     min-height: 100vh;
     background: #f8fafc;
+}
+
+.question-block {
+    animation: pop-in 0.22s ease-out both;
 }
 
 .exam-timer-bar {

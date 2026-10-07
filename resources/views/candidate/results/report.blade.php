@@ -29,7 +29,7 @@
         · Durée : {{ $attempt->duration_seconds ? Format::clock($attempt->duration_seconds) : '—' }}
     </p>
 
-    <div class="grid md:grid-cols-4 gap-4">
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         @foreach (\App\Enums\Skill::sequence() as $skill)
             @php $result = $results->get($skill->value); @endphp
             <div class="bg-white border border-slate-200 rounded-2xl p-5">

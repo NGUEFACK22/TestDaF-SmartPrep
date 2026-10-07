@@ -3,7 +3,7 @@
 @section('title', 'Connexion')
 
 @section('content')
-    <div class="mx-auto max-w-md bg-white border border-slate-200 rounded-2xl p-8 mt-8">
+    <div class="mx-auto max-w-md bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 mt-4 sm:mt-8">
         <h1 class="text-2xl font-bold mb-1">Connexion</h1>
         <p class="text-sm text-slate-500 mb-6">Accédez à votre espace de préparation au TestDaF digital.</p>
 

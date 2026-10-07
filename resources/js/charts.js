@@ -20,9 +20,11 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function build(canvas, type, series) {
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const baseOptions = {
         responsive: true,
         maintainAspectRatio: false,
+        animation: reduceMotion ? false : { duration: 800, easing: 'easeOutQuart' },
         plugins: { legend: { display: type === 'line' } },
         scales: { y: { beginAtZero: true, max: 100, ticks: { callback: (v) => v + ' %' } } },
     };
