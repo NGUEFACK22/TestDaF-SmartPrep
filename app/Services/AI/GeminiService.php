@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Log;
 class GeminiService
 {
     /** Dernier échec d'appel (status HTTP + extrait), null si dernier appel OK. */
-    private ?array $lastError = null;
+    protected ?array $lastError = null;
 
     public function enabled(): bool
     {
@@ -54,7 +54,7 @@ class GeminiService
         return $this->call($prompt, $systemInstruction, 0.2);
     }
 
-    private function call(string $prompt, string $systemInstruction, float $temperature): ?array
+    protected function call(string $prompt, string $systemInstruction, float $temperature): ?array
     {
         $this->lastError = null;
 

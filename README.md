@@ -48,7 +48,7 @@ Accueil → inscription → connexion → dashboard
 | Frontend | Blade + JavaScript vanilla (`resources/js/exam/*`), build Vite, responsive + animations |
 | File de jobs | Laravel queue (`QUEUE_CONNECTION=database`) — cron `queue:work --once` + `schedule:run` |
 | Tests | PHPUnit (`php artisan test`) : moteur d'examen, anti-contournement, niveaux, IA (mockée) |
-| IA (optionnel) | Gemini (génération QCM C1/C2 uniquement) |
+| IA (optionnel) | Gemini ou Mistral (génération QCM C1/C2, `AI_PROVIDER`) |
 
 ## Démarrage rapide
 

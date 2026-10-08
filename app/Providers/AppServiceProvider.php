@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Database\Connectors\NeonPgsqlConnector;
+use App\Services\AI\GeminiService;
+use App\Services\AI\MistralService;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +21,16 @@ class AppServiceProvider extends ServiceProvider
         // comporte comme le PostgresConnector standard de Laravel.
         $this->app->bind('db.connector.pgsql', function () {
             return new NeonPgsqlConnector;
+        });
+
+        // Fournisseur IA actif (défaut : gemini). Tout le code type-hinte
+        // GeminiService : avec AI_PROVIDER=mistral, c'est MistralService
+        // qui est injecté (même contrat : generateJson, lastError, lastRetryable).
+        // Les tests qui mockent GeminiService::class ne sont pas impactés.
+        $this->app->bind(GeminiService::class, function () {
+            return (string) config('testdaf.ai.provider') === 'mistral'
+                ? new MistralService()
+                : new GeminiService();
         });
     }
 
