@@ -26,7 +26,7 @@ class SettingController extends Controller
     {
         $data = $request->validate([
             'ai_enabled' => ['sometimes', 'boolean'],
-            'ai_provider' => ['required', 'string', 'in:gemini,mistral'],
+            'ai_provider' => ['required', 'string', 'in:gemini,mistral,groq'],
             'ai_model' => ['required', 'string', 'max:100'],
             'max_ai_requests' => ['required', 'integer', 'min:0', 'max:100000'],
             'ai_auto_evaluation' => ['sometimes', 'boolean'],
