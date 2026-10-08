@@ -43,12 +43,20 @@ class ExamService
         }
 
         return DB::transaction(function () use ($user, $test, $mode) {
+            // Rotation des LETTRES correctes : compte les tours précédents du
+            // candidat sur ce test. Chaque nouveau tour tourne d'un cran, donc
+            // la bonne lettre n'est jamais la même deux tours de suite.
+            $previousRounds = $user->attempts()
+                ->where('modell_test_id', $test->id)
+                ->count();
+
             $attempt = Attempt::create([
                 'user_id' => $user->id,
                 'modell_test_id' => $test->id,
                 'mode' => $mode,
                 'status' => AttemptStatus::InProgress,
                 'started_at' => now(),
+                'label_rotation' => $previousRounds,
             ]);
 
             // Ordre des parties = ordre des sections du test (position),
@@ -220,7 +228,7 @@ class ExamService
         if ($syncAdvanced) {
             return [
                 'outcome' => 'advanced',
-                'question' => $this->questionPayload($attemptExercise),
+                'question' => $this->questionPayload($attemptExercise, $attempt),
                 'timer' => $this->timer->display($attemptExercise),
                 'question_timer' => $this->questions->display($attemptExercise),
             ];
@@ -233,7 +241,7 @@ class ExamService
         if ($fromIndex !== null && $attemptExercise->questionIndex() > $fromIndex) {
             return [
                 'outcome' => 'resync',
-                'question' => $this->questionPayload($attemptExercise),
+                'question' => $this->questionPayload($attemptExercise, $attempt),
                 'timer' => $this->timer->display($attemptExercise),
                 'question_timer' => $this->questions->display($attemptExercise),
             ];
@@ -274,7 +282,7 @@ class ExamService
         return [
             'outcome' => 'advanced',
             'skipped' => (bool) $skipped,
-            'question' => $this->questionPayload($attemptExercise),
+            'question' => $this->questionPayload($attemptExercise, $attempt),
             'timer' => $this->timer->display($attemptExercise),
             'question_timer' => $this->questions->display($attemptExercise),
         ];
@@ -324,26 +332,109 @@ class ExamService
     }
 
     /**
-     * Options affichées dans un ordre brassé.
+     * Options affichées : ordre brassé + rotation optionnelle des LETTRES
+     * (rotation = 0 → comportement historique : libellés d'origine).
      *
-     * Le brassage est DÉTERMINISTE par graine : stable pendant toute la
-     * tentative (rechargements, resync) mais différent à chaque tentative.
-     * Les libellés voyagent avec leur texte (la correction compare les
-     * valeurs, jamais les positions) — anti-recopie sans toucher au score.
+     * Garantie clé : la lettre affichée de la bonne réponse ne dépend QUE de
+     * l'ordre canonique (ids triés) et du cran de rotation — jamais de
+     * l'ordre d'affichage (qui, lui, est re-brassé à part). Tour N+1 ≠ tour N.
+     * Le tout est DÉTERMINISTE : stable pendant toute la tentative.
      */
-    public function displayOptions(\App\Models\Question $question, string $seed): array
+    public function displayOptions(\App\Models\Question $question, string $seed, int $rotation = 0): array
+    {
+        return array_map(
+            fn ($row) => ['id' => $row['id'], 'label' => $row['label'], 'text' => $row['text']],
+            $this->computeDisplayed($question, $seed, $rotation)
+        );
+    }
+
+    /**
+     * Rotation effective des lettres pour une tentative (0 = libellés
+     * d'origine). Le compteur de tours est persisté sur la tentative :
+     * recalculable à tout moment (correction, résultats), sans dérive.
+     */
+    public function effectiveRotation(Attempt $attempt, \App\Models\Question $question): int
+    {
+        $question->loadMissing('answerOptions');
+        $count = max(1, $question->answerOptions->count());
+
+        return ((int) ($attempt->label_rotation ?? 0)) % $count;
+    }
+
+    /** Options affichées pour une tentative (graine + rotation du tour). */
+    public function displayOptionsForAttempt(\App\Models\Question $question, Attempt $attempt): array
+    {
+        return $this->displayOptions(
+            $question,
+            $this->optionSeed($attempt, $question),
+            $this->effectiveRotation($attempt, $question)
+        );
+    }
+
+    /**
+     * Calcul partagé (affichage + correction + résultats) : chaque ligne
+     * contient id, libellé affiché, texte et flag correct d'origine.
+     */
+    private function computeDisplayed(\App\Models\Question $question, string $seed, int $rotation): array
     {
         $question->loadMissing('answerOptions');
 
-        return $question->answerOptions
+        // Ordre d'affichage : brassé par graine (positions différentes).
+        $ordered = $question->answerOptions
             ->sortBy(fn ($o) => md5($seed.':'.$o->getKey()))
-            ->map(fn ($o) => [
-                'id' => $o->id,
-                'label' => $o->label,
-                'text' => $o->text,
-            ])
-            ->values()
-            ->all();
+            ->values();
+
+        // Ordre canonique : ids triés (stable d'un tour à l'autre).
+        $canonIds = $question->answerOptions
+            ->sortBy(fn ($o) => $o->getKey())
+            ->map(fn ($o) => $o->getKey())
+            ->values()->all();
+
+        // Jeu de lettres trié (insensible à toute mutation préalable).
+        $base = $question->answerOptions
+            ->map(fn ($o) => (string) $o->label)
+            ->sort()
+            ->values()->all();
+
+        $n = count($base);
+        $shift = $n > 1 ? ($rotation % $n) : 0;
+
+        $out = [];
+        foreach ($ordered as $option) {
+            // Index canonique de l'option : la lettre affichée tourne avec
+            // le compteur de tours, indépendamment de la position à l'écran.
+            $canonIndex = array_search($option->getKey(), $canonIds, true);
+            $canonIndex = $canonIndex === false ? 0 : (int) $canonIndex;
+
+            $out[] = [
+                'id' => $option->getKey(),
+                'label' => $shift === 0
+                    ? (string) $option->label
+                    : $base[($canonIndex + $shift) % $n],
+                'text' => $option->text,
+                'is_correct' => (bool) $option->is_correct,
+            ];
+        }
+
+        return $out;
+    }
+
+    /** Libellés affichés des bonnes réponses (correction, page résultats). */
+    public function displayedCorrectLabels(\App\Models\Question $question, Attempt $attempt): array
+    {
+        $out = [];
+
+        foreach ($this->computeDisplayed(
+            $question,
+            $this->optionSeed($attempt, $question),
+            $this->effectiveRotation($attempt, $question)
+        ) as $opt) {
+            if ($opt['is_correct']) {
+                $out[] = (string) $opt['label'];
+            }
+        }
+
+        return $out;
     }
 
     /** Graine de brassage d'une question pour une tentative donnée. */
@@ -359,31 +450,45 @@ class ExamService
     }
 
     /**
-     * Applique le brassage aux options chargées (vue d'examen non chronométré) :
-     * même graine que questionPayload → ordre identique partout pendant la
-     * tentative.
+     * Applique le brassage + rotation aux options chargées (vue d'examen
+     * non chronométré) : identique au JSON, partout pendant la tentative.
      */
     public function applyOptionShuffle(iterable $questions, Attempt $attempt): void
     {
         foreach ($questions as $question) {
             $question->loadMissing('answerOptions');
+            $seed = $this->optionSeed($attempt, $question);
+            $rotation = $this->effectiveRotation($attempt, $question);
+            $displayed = $this->displayOptions($question, $seed, $rotation);
+            $byId = collect($displayed)->keyBy('id');
+
             $question->setRelation(
                 'answerOptions',
                 $question->answerOptions
-                    ->sortBy(fn ($o) => md5($this->optionSeed($attempt, $question).':'.$o->getKey()))
+                    ->sortBy(fn ($o) => array_search($o->getKey(), array_keys($byId->all())))
+                    ->map(fn ($o) => tap($o->replicate(), function ($copy) use ($byId, $o) {
+                        $copy->label = $byId[$o->getKey()]['label'];
+                    }))
                     ->values()
             );
         }
     }
 
     /** Question courante sérialisée pour le frontend (options brassées). */
-    public function questionPayload(AttemptExercise $attemptExercise): ?array
+    public function questionPayload(AttemptExercise $attemptExercise, ?Attempt $attempt = null): ?array
     {
         $question = $attemptExercise->currentQuestion();
 
         if (! $question) {
             return null;
         }
+
+        $options = $attempt !== null
+            ? $this->displayOptionsForAttempt($question, $attempt)
+            : $this->displayOptions(
+                $question,
+                self::attemptQuestionSeed((int) $attemptExercise->attempt_id, (int) $question->getKey())
+            );
 
         return [
             'id' => $question->id,
@@ -394,12 +499,7 @@ class ExamService
                 ? (int) $question->time_limit_seconds
                 : null,
             'data' => $question->data,
-            // Graine = attempt_id (colonne, zéro requête) : stable pendant
-            // la tentative, différente à chaque tentative.
-            'answer_options' => $this->displayOptions(
-                $question,
-                self::attemptQuestionSeed((int) $attemptExercise->attempt_id, (int) $question->getKey())
-            ),
+            'answer_options' => $options,
         ];
     }
 

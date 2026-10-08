@@ -9,7 +9,10 @@ use Illuminate\Http\Request;
 
 class ResultController extends Controller
 {
-    public function __construct(private StatisticsService $statistics) {}
+    public function __construct(
+        private StatisticsService $statistics,
+        private \App\Services\Exam\ExamService $exam,
+    ) {}
 
     public function show(Request $request, Attempt $attempt)
     {
@@ -35,7 +38,35 @@ class ResultController extends Controller
             'grade20' => $grade20,
             'partSummary' => $this->statistics->partSummary($attempt),
             'weakTypes' => $this->statistics->weakQuestionTypes($request->user(), 5),
+            // Bonnes réponses dans les LETTRES affichées pendant la tentative
+            // (rotation) : cohérence avec ce que le candidat a vu.
+            'correctLabels' => $this->correctLabels($attempt),
         ]);
+    }
+
+    /**
+     * Map question_id → libellés affichés des bonnes réponses, pour les
+     * types à options (les lettres tournent à chaque tour).
+     */
+    private function correctLabels(Attempt $attempt): array
+    {
+        $map = [];
+
+        foreach ($attempt->attemptExercises as $ae) {
+            foreach ($ae->formQuestions() as $question) {
+                if (! in_array($question->type, ['single_choice', 'true_false', 'multiple_choice'], true)) {
+                    continue;
+                }
+
+                $labels = $this->exam->displayedCorrectLabels($question, $attempt);
+
+                if ($labels !== []) {
+                    $map[$question->id] = $labels;
+                }
+            }
+        }
+
+        return $map;
     }
 
     public function report(Request $request, Attempt $attempt)

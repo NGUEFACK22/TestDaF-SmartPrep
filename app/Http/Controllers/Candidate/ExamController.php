@@ -176,7 +176,7 @@ class ExamController extends Controller
             'exercise_id' => $current->exercise_id,
             'timer' => $this->timer->display($current),
             'question_timer' => $this->questionTimer->display($current),
-            'question' => $this->exam->questionPayload($current),
+            'question' => $this->exam->questionPayload($current, $attempt),
             'redirect' => null,
         ]);
     }

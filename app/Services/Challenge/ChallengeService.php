@@ -219,6 +219,17 @@ class ChallengeService
         $items = $this->fetchItems($challenge, $min);
 
         if (count($items) < $min) {
+            // Échec transitoire (quota API 429, surcharge 5xx) : message adapté,
+            // inutile de gaspiller un 2e appel collé au 1er (il échouerait pareil).
+            if ($this->gemini->lastRetryable()) {
+                $status = (int) ($this->gemini->lastError()['status'] ?? 0);
+
+                return $this->markFailed(
+                    $challenge,
+                    "IA momentanément indisponible (erreur {$status} : surcharge ou quota API). Attendez quelques minutes puis relancez la génération."
+                );
+            }
+
             return $this->markFailed(
                 $challenge,
                 "Génération incomplète ({$this->count($items)}/{$min} questions valides). Relancez la génération."
@@ -246,7 +257,7 @@ class ChallengeService
 
     // ---------------------------------------------------------- interne
 
-    /** Appelle l'IA (+1 relance de complétion si < min). */
+    /** Appelle l'IA (+1 relance de complétion si < min et échec non transitoire). */
     private function fetchItems(AiChallenge $challenge, int $min): array
     {
         $nonce = bin2hex(random_bytes(4));
@@ -255,6 +266,13 @@ class ChallengeService
         );
 
         if (count($items) >= $min) {
+            return $items;
+        }
+
+        // Échec transitoire (429/5xx) : pas de relance immédiate, elle
+        // échouerait à l'identique une seconde plus tard. Laisser generate()
+        // signaler "réessayez dans quelques minutes".
+        if ($this->gemini->lastRetryable()) {
             return $items;
         }
 

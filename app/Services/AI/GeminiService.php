@@ -13,10 +13,27 @@ use Illuminate\Support\Facades\Log;
  */
 class GeminiService
 {
+    /** Dernier échec d'appel (status HTTP + extrait), null si dernier appel OK. */
+    private ?array $lastError = null;
+
     public function enabled(): bool
     {
         return (bool) config('testdaf.ai.enabled')
             && ! empty(config('testdaf.ai.gemini_api_key'));
+    }
+
+    /** Dernier échec : ['status' => int, 'body' => string] ou null. */
+    public function lastError(): ?array
+    {
+        return $this->lastError;
+    }
+
+    /** L'échec est-il transitoire (429 quota, 5xx, timeout) → vaut le coup de réessayer plus tard. */
+    public function lastRetryable(): bool
+    {
+        $status = (int) ($this->lastError['status'] ?? 0);
+
+        return in_array($status, [408, 425, 429, 500, 502, 503, 504], true);
     }
 
     /**
@@ -39,6 +56,8 @@ class GeminiService
 
     private function call(string $prompt, string $systemInstruction, float $temperature): ?array
     {
+        $this->lastError = null;
+
         if (! $this->enabled()) {
             return null;
         }
@@ -66,10 +85,11 @@ class GeminiService
             $response = Http::timeout(120)->acceptJson()->post($url, $payload);
 
             if ($response->failed()) {
-                Log::error('GeminiService: échec API', [
+                $this->lastError = [
                     'status' => $response->status(),
                     'body' => mb_substr($response->body(), 0, 500),
-                ]);
+                ];
+                Log::error('GeminiService: échec API', $this->lastError);
 
                 return null;
             }
@@ -77,13 +97,22 @@ class GeminiService
             $text = data_get($response->json(), 'candidates.0.content.parts.0.text');
 
             if (! is_string($text) || $text === '') {
+                $this->lastError = ['status' => 200, 'body' => 'Réponse vide du fournisseur.'];
+
                 return null;
             }
 
             $decoded = json_decode($text, true);
 
-            return json_last_error() === JSON_ERROR_NONE ? $decoded : null;
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $this->lastError = ['status' => 200, 'body' => 'JSON invalide : '.mb_substr($text, 0, 200)];
+
+                return null;
+            }
+
+            return $decoded;
         } catch (\Throwable $e) {
+            $this->lastError = ['status' => 0, 'body' => $e->getMessage()];
             Log::error('GeminiService: exception', ['message' => $e->getMessage()]);
 
             return null;

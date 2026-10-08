@@ -44,7 +44,7 @@ class ScoringService
                 continue;
             }
 
-            $points = $this->scorePoints($question, $userAnswer->decoded());
+            $points = $this->scorePoints($question, $userAnswer->decoded(), $attempt);
             $isCorrect = $points >= $questionMax - 1e-9 && $questionMax > 0;
 
             $userAnswer->update([
@@ -59,8 +59,11 @@ class ScoringService
         $attemptExercise->update(['score' => round($earned, 2), 'max_score' => round($max, 2)]);
     }
 
-    /** Compare une réponse candidat à la réponse correcte selon le type (100% ou 0%). */
-    public function isCorrect(Question $question, mixed $answer): bool
+    /**
+     * Compare une réponse candidat à la réponse correcte selon le type (100% ou 0%).
+     * Avec une tentative, on compare aux lettres AFFICHÉES (rotation du tour).
+     */
+    public function isCorrect(Question $question, mixed $answer, ?Attempt $attempt = null): bool
     {
         $max = (float) $question->points;
 
@@ -68,14 +71,14 @@ class ScoringService
             return false;
         }
 
-        return $this->scorePoints($question, $answer) >= $max - 1e-9;
+        return $this->scorePoints($question, $answer, $attempt) >= $max - 1e-9;
     }
 
     /**
      * Points obtenus (0..points) avec barème partiel.
      * Déterministe, sans IA, arrondi à 2 décimales par l'appelant.
      */
-    public function scorePoints(Question $question, mixed $answer): float
+    public function scorePoints(Question $question, mixed $answer, ?Attempt $attempt = null): float
     {
         $correct = $question->correct_answer;
 
@@ -84,6 +87,17 @@ class ScoringService
         }
 
         $max = (float) $question->points;
+
+        // Rotation des lettres : la réponse (libellés affichés) se compare
+        // aux libellés affichés des bonnes options. Sans tentative (tests,
+        // legacy) : comportement historique sur les libellés stockés.
+        if ($attempt !== null && in_array($question->type, ['single_choice', 'true_false', 'multiple_choice'], true)) {
+            $shown = app(ExamService::class)->displayedCorrectLabels($question, $attempt);
+
+            if ($shown !== []) {
+                $correct = $shown;
+            }
+        }
 
         $ratio = match ($question->type) {
             'multiple_choice' => $this->scoreSetsRatio((array) $answer, (array) $correct),

@@ -17,6 +17,7 @@ class Attempt extends Model
         'user_id', 'modell_test_id', 'mode', 'status', 'score', 'max_score',
         'current_section_id', 'current_exercise_id',
         'started_at', 'completed_at', 'duration_seconds',
+        'label_rotation',
     ];
 
     protected function casts(): array

@@ -58,7 +58,10 @@ class ChallengeTest extends TestCase
                 if (! $question->isObjective()) {
                     continue;
                 }
-                $answers->save($attempt->fresh(), $task->fresh(), $question, (array) $question->correct_answer);
+                // Comme un vrai candidat : on répond les lettres AFFICHÉES
+                // (rotation d'un tour à l'autre).
+                $shown = $engine->displayedCorrectLabels($question, $attempt->fresh());
+                $answers->save($attempt->fresh(), $task->fresh(), $question, $shown !== [] ? $shown : (array) $question->correct_answer);
                 $engine->advanceQuestion($attempt->fresh(), $task->fresh());
             }
 
@@ -196,6 +199,7 @@ class ChallengeTest extends TestCase
             $mock->shouldReceive('generateJson')->twice()->andReturnValues([
                 $this->fakeItems(5), $this->fakeItems(5, 100),
             ]);
+            $mock->shouldReceive('lastRetryable')->andReturn(false);
         });
 
         $challenge = AiChallenge::create([
@@ -212,6 +216,34 @@ class ChallengeTest extends TestCase
 
         $this->assertSame('failed', $challenge->fresh()->status);
         $this->assertNotNull($challenge->fresh()->error);
+    }
+
+    public function test_transient_api_failure_marks_failed_without_pointless_retry(): void
+    {
+        $gemini = $this->mock(GeminiService::class, function ($mock) {
+            $mock->shouldReceive('enabled')->andReturn(true);
+            // 429 répété : UN seul appel (la relance immédiate est inutile).
+            $mock->shouldReceive('generateJson')->once()->andReturn(null);
+            $mock->shouldReceive('lastRetryable')->andReturn(true);
+            $mock->shouldReceive('lastError')->andReturn(['status' => 429, 'body' => 'quota']);
+        });
+
+        $challenge = AiChallenge::create([
+            'user_id' => $this->user->id,
+            'modell_test_id' => $this->c1Test()->id,
+            'skill' => 'lesen',
+            'status' => 'generating',
+            'level' => 'C1',
+            'weak_snapshot' => [],
+            'requested_at' => now(),
+        ]);
+
+        app(ChallengeService::class)->generate($challenge);
+
+        $challenge = $challenge->fresh();
+        $this->assertSame('failed', $challenge->status);
+        $this->assertStringContainsString('429', (string) $challenge->error);
+        $this->assertStringContainsString('quelques minutes', (string) $challenge->error);
     }
 
     public function test_store_requires_unlock_and_quota(): void

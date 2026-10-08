@@ -145,9 +145,10 @@
                         <div class="mt-2 text-sm border-l-2 pl-3 {{ $answer?->is_correct ? 'border-green-400' : 'border-red-300' }}">
                             <div class="text-slate-700">{{ $question->prompt }}</div>
                             @if ($question->isObjective() && $question->correct_answer)
+                                @php $shown = $correctLabels[$question->id] ?? (is_array($question->correct_answer) ? $question->correct_answer : [$question->correct_answer]); @endphp
                                 <div class="text-slate-500">
                                     Votre réponse : <strong>{{ is_array($answer?->decoded()) ? implode(', ', $answer->decoded()) : ($answer?->answer ?? '—') }}</strong>
-                                    · Bonne réponse : <strong>{{ is_array($question->correct_answer) ? implode(', ', $question->correct_answer) : $question->correct_answer }}</strong>
+                                    · Bonne réponse : <strong>{{ implode(', ', (array) $shown) }}</strong>
                                 </div>
                             @endif
                             @if ($question->explanation)
