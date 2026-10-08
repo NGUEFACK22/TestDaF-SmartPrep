@@ -55,7 +55,7 @@ return [
     'ai' => [
         'enabled' => env('AI_ENABLED', false),
         'provider' => env('AI_PROVIDER', 'gemini'),
-        'model' => env('AI_MODEL', 'gemini-1.5-flash'),
+        'model' => env('AI_MODEL', 'gemini-3.5-flash-lite'),
         'gemini_api_key' => env('GEMINI_API_KEY'),
         'gemini_endpoint' => env('GEMINI_ENDPOINT', 'https://generativelanguage.googleapis.com/v1beta'),
         'whisper_endpoint' => env('WHISPER_ENDPOINT'),
