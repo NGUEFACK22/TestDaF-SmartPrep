@@ -9,6 +9,7 @@
 .env
 .env.backup
 .env.production
+.env.bak
 /database/*.sqlite
 _*
 .phpactor.json
@@ -32,3 +33,9 @@ yarn-error.log
 # Materiaux locaux de reference (demos officielles TestDaF/Goethe/OeSD/telc, sources C1, captures UI officielles) — non distribues avec le depot
 /materiels
 .env.neon
+
+# Fichiers de travail/brouillons locaux
+*.bak
+output.txt
+test_output.txt
+testout.txt

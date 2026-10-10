@@ -7,7 +7,7 @@
         <h1 class="text-2xl font-bold">Notifications ({{ $unread }} non lue(s))</h1>
         <form method="POST" action="{{ route('notifications.readAll') }}">
             @csrf
-            <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100">Tout marquer comme lu</button>
+            <button class="btn rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-blue-100">Tout marquer comme lu</button>
         </form>
     </div>
 
@@ -20,7 +20,7 @@
                 </div>
                 <div class="flex items-center gap-2">
                     @if (! empty($notification->data['url']))
-                        <a href="{{ $notification->data['url'] }}" class="text-sm text-blue-600 hover:underline">Voir</a>
+                        <a href="{{ $notification->data['url'] }}" class="btn text-blue-600 hover:bg-blue-100 hover:underline">Voir</a>
                     @endif
                     @if (! $notification->read_at)
                         <form method="POST" action="{{ route('notifications.read', $notification->id) }}">

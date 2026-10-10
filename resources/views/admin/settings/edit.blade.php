@@ -47,6 +47,6 @@
             <span class="text-slate-500">Permet au correcteur de valider / corriger les productions.</span></span>
         </label>
 
-        <button class="rounded-lg bg-blue-600 text-white px-5 py-2.5 font-medium hover:bg-blue-700">Enregistrer</button>
+        <button class="btn rounded-lg bg-blue-600 text-white px-5 py-2.5 font-medium hover:bg-blue-700">Enregistrer</button>
     </form>
 @endsection

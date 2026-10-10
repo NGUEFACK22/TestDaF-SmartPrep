@@ -26,9 +26,9 @@
             <h1 class="text-2xl font-bold">Bonjour {{ auth()->user()->name }}</h1>
             <p class="text-sm text-slate-500">Votre progression vers le TestDaF digital.</p>
         </div>
-        <a href="{{ route('preparation.index') }}" class="rounded-lg bg-blue-600 text-white px-4 py-2.5 font-medium hover:bg-blue-700">
-            S'entraîner par niveau
-        </a>
+<a href="{{ route('preparation.index') }}" class="btn btn-primary rounded-lg bg-blue-600 text-white px-4 py-2.5 font-medium hover:bg-blue-700">
+                S'entraîner par niveau
+            </a>
     </div>
 
     @if ($activeAttempt)
@@ -37,7 +37,7 @@
                 <div class="font-semibold text-amber-900">Tentative en cours — {{ $activeAttempt->modellTest?->title }}</div>
                 <div class="text-sm text-amber-800">Reprenez là où vous vous êtes arrêté. Le temps serveur continue d'être respecté.</div>
             </div>
-            <a href="{{ route('exam.show', $activeAttempt) }}" class="rounded-lg bg-amber-600 text-white px-4 py-2 font-medium hover:bg-amber-700">
+            <a href="{{ route('exam.show', $activeAttempt) }}" class="btn btn-amber rounded-lg bg-amber-600 text-white px-4 py-2 font-medium hover:bg-amber-700">
                 Reprendre
             </a>
         </div>
@@ -57,7 +57,7 @@
                     @endif
                 </div>
             </div>
-            <a href="{{ route('challenges.index') }}" class="rounded-lg bg-violet-600 text-white px-4 py-2 font-medium hover:bg-violet-700">
+            <a href="{{ route('challenges.index') }}" class="btn btn-violet rounded-lg bg-violet-600 text-white px-4 py-2 font-medium hover:bg-violet-700">
                 Ouvrir l'Espace Élite
             </a>
         </div>

@@ -26,7 +26,7 @@
                 <form method="POST" action="{{ route('challenges.store') }}">
                     @csrf
                     <input type="hidden" name="modell_test_id" value="{{ $unlock->modell_test_id }}">
-                    <button class="rounded-lg bg-violet-600 text-white px-4 py-2 text-sm font-medium hover:bg-violet-700">
+                    <button class="btn btn-violet rounded-lg bg-violet-600 text-white px-4 py-2 text-sm font-medium hover:bg-violet-700">
                         Générer mes {{ $minQuestions }} QCM inédits
                     </button>
                 </form>
@@ -47,7 +47,7 @@
                 <p class="text-sm text-violet-800 mt-1" data-challenge-label>Génération en cours… vos QCM inédits arrivent (restez sur la page, actualisation auto).</p>
             @elseif ($active->status === 'ready')
                 <p class="text-sm text-violet-800 mt-1">Prêt ! QCM inédits calibrés sur vos faiblesses.</p>
-                <a href="{{ route('challenges.play', $active) }}" class="inline-block mt-3 rounded-lg bg-violet-600 text-white px-5 py-2.5 font-semibold hover:bg-violet-700">
+                <a href="{{ route('challenges.play', $active) }}" class="btn btn-violet inline-block mt-3 rounded-lg bg-violet-600 text-white px-5 py-2.5 font-semibold hover:bg-violet-700">
                     ▶ Jouer le défi
                 </a>
             @elseif ($active->status === 'failed')
@@ -87,7 +87,7 @@
                     <span class="text-slate-400">· demandé le {{ $item->requested_at?->format('d/m/Y H:i') }}</span>
                 </span>
                 @if ($item->status === 'ready')
-                    <a href="{{ route('challenges.play', $item) }}" class="text-violet-600 hover:underline font-medium">Jouer / rejouer →</a>
+                    <a href="{{ route('challenges.play', $item) }}" class="btn text-violet-600 hover:bg-violet-100 hover:underline font-medium">Jouer / rejouer →</a>
                 @endif
             </div>
         @empty

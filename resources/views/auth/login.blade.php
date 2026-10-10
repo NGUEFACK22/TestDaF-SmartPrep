@@ -27,7 +27,7 @@
                 Se souvenir de moi
             </label>
 
-            <button class="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-white font-medium hover:bg-blue-700">
+            <button class="btn btn-primary w-full rounded-lg bg-blue-600 px-4 py-2.5 text-white font-medium hover:bg-blue-700">
                 Se connecter
             </button>
         </form>

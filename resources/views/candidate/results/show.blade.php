@@ -9,10 +9,10 @@
         <div class="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
             <strong>Tentative en cours.</strong> Ce test n'est pas terminé — les scores
             affichés sont partiels et indicatifs.
-            <a href="{{ route('exam.show', $attempt) }}"
-               class="ml-3 inline-block rounded-lg bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700 align-middle">
-                Reprendre le test
-            </a>
+<a href="{{ route('exam.show', $attempt) }}"
+                   class="btn ml-3 rounded-lg bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700 align-middle">
+                    Reprendre le test
+                </a>
         </div>
     @endif
 
@@ -36,7 +36,7 @@
                 </p>
             @endif
         </div>
-        <a href="{{ route('results.report', $attempt) }}" class="rounded-lg bg-slate-900 text-white px-4 py-2 text-sm font-medium hover:bg-slate-700">
+        <a href="{{ route('results.report', $attempt) }}" class="btn rounded-lg bg-slate-900 text-white px-4 py-2 text-sm font-medium hover:bg-slate-700">
             Rapport complet
         </a>
     </div>

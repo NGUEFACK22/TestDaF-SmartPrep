@@ -78,8 +78,8 @@
     </div>
 
     <div class="mt-6 flex gap-3">
-        <a href="{{ route('results.show', $attempt) }}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100">Retour aux résultats</a>
-        <a href="{{ route('preparation.index') }}" class="rounded-lg bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700">Nouvelle session</a>
+        <a href="{{ route('results.show', $attempt) }}" class="btn rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-blue-100">Retour aux résultats</a>
+        <a href="{{ route('preparation.index') }}" class="btn btn-primary rounded-lg bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700">Nouvelle session</a>
     </div>
 
     <p class="text-xs text-slate-400 mt-6">

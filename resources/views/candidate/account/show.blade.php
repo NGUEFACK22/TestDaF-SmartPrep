@@ -10,7 +10,7 @@
         <div class="bg-white border border-slate-200 rounded-2xl p-5">
             <h2 class="font-semibold mb-2">Exporter mes données (RGPD)</h2>
             <p class="text-sm text-slate-500 mb-4">Profil, tentatives, résultats et recommandations au format JSON.</p>
-            <a href="{{ route('account.export') }}" class="rounded-lg bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700">Télécharger l'export JSON</a>
+            <a href="{{ route('account.export') }}" class="btn rounded-lg bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700">Télécharger l'export JSON</a>
         </div>
 
         <div class="bg-white border border-red-200 rounded-2xl p-5">
@@ -29,7 +29,7 @@
                     <input type="checkbox" name="confirm" value="1" required class="rounded border-slate-300">
                     Je confirme la suppression définitive
                 </label>
-                <button class="rounded-lg bg-red-600 text-white px-4 py-2 text-sm font-medium hover:bg-red-700">
+                <button class="btn rounded-lg bg-red-600 text-white px-4 py-2 text-sm font-medium hover:bg-red-700">
                     Supprimer définitivement
                 </button>
             </form>

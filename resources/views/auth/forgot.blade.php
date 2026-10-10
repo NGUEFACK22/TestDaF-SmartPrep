@@ -19,7 +19,7 @@
                        class="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500">
                 @error('email')<p class="text-sm text-red-600 mt-1">{{ $message }}</p>@enderror
             </div>
-            <button class="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-white font-medium hover:bg-blue-700">
+            <button class="btn btn-primary w-full rounded-lg bg-blue-600 px-4 py-2.5 text-white font-medium hover:bg-blue-700">
                 Envoyer le lien
             </button>
         </form>

@@ -36,6 +36,6 @@
             @endforeach
         </div>
     <div class="mt-6">
-        <a href="{{ route('preparation.index') }}" class="text-sm text-blue-600 hover:underline">← Retour à la préparation</a>
+        <a href="{{ route('preparation.index') }}" class="btn text-blue-600 hover:bg-blue-100 hover:underline">← Retour à la préparation</a>
     </div>
 @endsection

@@ -11,10 +11,10 @@
             QCM inédits générés par IA et statistiques de progression.
         </p>
         <div class="flex flex-wrap gap-3">
-            <a href="{{ route('register') }}" class="rounded-lg bg-white text-blue-700 px-5 py-2.5 font-medium hover:bg-blue-50">
+            <a href="{{ route('register') }}" class="btn btn-primary">
                 Commencer
             </a>
-            <a href="{{ route('login') }}" class="rounded-lg border border-blue-300/60 px-5 py-2.5 font-medium hover:bg-blue-700/40">
+            <a href="{{ route('login') }}" class="btn btn-secondary">
                 J'ai déjà un compte
             </a>
         </div>

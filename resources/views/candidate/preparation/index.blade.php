@@ -75,14 +75,4 @@
         @endforeach
     </div>
 
-    <div class="bg-white border border-slate-200 rounded-2xl p-5 mt-6">
-        <h2 class="font-semibold mb-3">Espace Élite 🏆</h2>
-        <p class="text-sm text-slate-500">
-            Deux scores parfaits d'affilée sur un même niveau débloquent des défis IA
-            supplémentaires, calibrés sur vos erreurs.
-        </p>
-        <a href="{{ route('challenges.index') }}" class="inline-block mt-3 text-sm text-violet-600 hover:underline font-medium">
-            Ouvrir l'Espace Élite →
-        </a>
-    </div>
-@endsection
+    @endsection

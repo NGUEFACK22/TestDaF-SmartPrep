@@ -5,7 +5,7 @@
 @section('content')
     <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold">Bibliothèque d'exercices</h1>
-        <a href="{{ route('admin.exercises.create') }}" class="rounded-lg bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700">Créer</a>
+        <a href="{{ route('admin.exercises.create') }}" class="btn rounded-lg bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700">Créer</a>
     </div>
 
     <div class="bg-white border border-slate-200 rounded-2xl mt-6 overflow-x-auto">

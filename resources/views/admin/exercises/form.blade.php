@@ -91,7 +91,7 @@
             <textarea name="explanation" rows="3" class="w-full rounded-lg border border-slate-300 px-3 py-2">{{ old('explanation', $exercise->explanation) }}</textarea>
         </div>
 
-        <button class="rounded-lg bg-blue-600 text-white px-5 py-2.5 font-medium hover:bg-blue-700">
+        <button class="btn rounded-lg bg-blue-600 text-white px-5 py-2.5 font-medium hover:bg-blue-700">
             {{ $exercise->exists ? 'Mettre à jour' : 'Créer' }}
         </button>
 
@@ -110,7 +110,7 @@
                            class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm">
                 </div>
             @endforeach
-            <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100">Mettre à jour les questions</button>
+            <button class="btn rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-blue-100">Mettre à jour les questions</button>
         </div>
     @endif
     </form>
