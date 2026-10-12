@@ -22,6 +22,52 @@ Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
+// DIAGNOSTIC TEMPORAIRE (à retirer) : état du conteneur + worker de file.
+Route::get('/__diag', function (\Illuminate\Http\Request $request) {
+    abort_unless($request->query('k') === 'syn-2026-diag', 404);
+
+    $procs = [];
+    foreach (glob('/proc/[0-9]*/cmdline') ?: [] as $f) {
+        $cmd = @file_get_contents($f);
+        if ($cmd === false || $cmd === '') {
+            continue;
+        }
+        $cmd = trim(str_replace("\0", ' ', $cmd));
+        if (str_contains($cmd, 'queue:work') || str_contains($cmd, 'php-fpm') || str_contains($cmd, 'nginx')) {
+            $procs[] = $cmd;
+        }
+    }
+
+    $data = [
+        'build' => 'diag-2026-10-12-a',
+        'env' => app()->environment(),
+        'debug' => (bool) config('app.debug'),
+        'server_time' => now()->toDateTimeString(),
+        'queue_default' => config('queue.default'),
+        'db_default' => config('database.default'),
+        'db_host' => config('database.connections.'.config('database.default').'.host'),
+        'jobs' => \Illuminate\Support\Facades\DB::table('jobs')->count(),
+        'failed_jobs' => \Illuminate\Support\Facades\DB::table('failed_jobs')->count(),
+        'processes' => $procs,
+    ];
+
+    if ($request->boolean('run')) {
+        try {
+            $code = \Illuminate\Support\Facades\Artisan::call('queue:work', [
+                '--once' => true,
+                '--stop-when-empty' => true,
+                '--tries' => 1,
+            ]);
+            $data['queue_run_exit'] = $code;
+            $data['queue_run_output'] = \Illuminate\Support\Facades\Artisan::output();
+        } catch (\Throwable $e) {
+            $data['queue_run_error'] = get_class($e).': '.$e->getMessage();
+        }
+    }
+
+    return response()->json($data, 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+})->middleware('throttle:20,1');
+
 // ------------------------------------------------------------------ Invités
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'show'])->name('login');
