@@ -39,8 +39,6 @@ services:
         sync: false
       - key: DB_SSLMODE
         value: require
-      - key: DB_ENDPOINT
-        sync: false # 1er segment du hostname (SNI pooler Neon)
       # --- Files d'attente / cache / sessions (base, sans Redis) ---
       - key: SESSION_DRIVER
         value: database

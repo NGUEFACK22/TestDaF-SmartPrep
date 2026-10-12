@@ -22,8 +22,19 @@ class NeonPgsqlConnector extends PostgresConnector
     {
         $dsn = parent::getDsn($config);
 
-        if (! empty($config['endpoint'])) {
-            $dsn .= ';options=endpoint=' . $config['endpoint'];
+        // L'endpoint SNI = premier segment du hostname, EXACTEMENT tel que Neon
+        // l'infère (ex. "ep-broad-queen-b5lqx7x0-pooler" pour un pooler). Le passer
+        // différemment (ex. sans le suffixe "-pooler") produit l'erreur Neon
+        // "Inconsistent project name inferred from SNI ...". On dérive donc
+        // l'endpoint du hostname pour être toujours cohérent avec le SNI.
+        $host = (string) ($config['host'] ?? '');
+        $endpoint = trim(strtok($host, '.') ?: '');
+        if ($endpoint === '') {
+            $endpoint = (string) ($config['endpoint'] ?? '');
+        }
+
+        if ($endpoint !== '') {
+            $dsn .= ';options=endpoint=' . $endpoint;
         }
 
         return $dsn;
