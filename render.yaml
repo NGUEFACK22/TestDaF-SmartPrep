@@ -85,3 +85,53 @@ services:
     dockerfilePath: ./Dockerfile
     schedule: "* * * * *"
     dockerCommand: "php artisan schedule:run && php artisan queue:work --once --tries=3 --timeout=280"
+    # Le worker est un service SEPARE : il n'hérite PAS des variables du web.
+    # Sans elles, il ne peut ni se connecter à Neon ni signer les sessions.
+    # fromService tierce les valeurs (secrets compris) depuis le service web.
+    envVars:
+      - key: APP_NAME
+        fromService: { type: web, name: synphonie, envVarKey: APP_NAME }
+      - key: APP_ENV
+        fromService: { type: web, name: synphonie, envVarKey: APP_ENV }
+      - key: APP_KEY
+        fromService: { type: web, name: synphonie, envVarKey: APP_KEY }
+      - key: APP_URL
+        fromService: { type: web, name: synphonie, envVarKey: APP_URL }
+      - key: LOG_CHANNEL
+        fromService: { type: web, name: synphonie, envVarKey: LOG_CHANNEL }
+      - key: DB_CONNECTION
+        fromService: { type: web, name: synphonie, envVarKey: DB_CONNECTION }
+      - key: DB_HOST
+        fromService: { type: web, name: synphonie, envVarKey: DB_HOST }
+      - key: DB_PORT
+        fromService: { type: web, name: synphonie, envVarKey: DB_PORT }
+      - key: DB_DATABASE
+        fromService: { type: web, name: synphonie, envVarKey: DB_DATABASE }
+      - key: DB_USERNAME
+        fromService: { type: web, name: synphonie, envVarKey: DB_USERNAME }
+      - key: DB_PASSWORD
+        fromService: { type: web, name: synphonie, envVarKey: DB_PASSWORD }
+      - key: DB_SSLMODE
+        fromService: { type: web, name: synphonie, envVarKey: DB_SSLMODE }
+      - key: SESSION_DRIVER
+        fromService: { type: web, name: synphonie, envVarKey: SESSION_DRIVER }
+      - key: CACHE_STORE
+        fromService: { type: web, name: synphonie, envVarKey: CACHE_STORE }
+      - key: QUEUE_CONNECTION
+        fromService: { type: web, name: synphonie, envVarKey: QUEUE_CONNECTION }
+      - key: TESTDAF_MEDIA_DISK
+        fromService: { type: web, name: synphonie, envVarKey: TESTDAF_MEDIA_DISK }
+      - key: AI_ENABLED
+        fromService: { type: web, name: synphonie, envVarKey: AI_ENABLED }
+      - key: AI_PROVIDER
+        fromService: { type: web, name: synphonie, envVarKey: AI_PROVIDER }
+      - key: GROQ_API_KEY
+        fromService: { type: web, name: synphonie, envVarKey: GROQ_API_KEY }
+      - key: GROQ_MODEL
+        fromService: { type: web, name: synphonie, envVarKey: GROQ_MODEL }
+      - key: MAX_AI_REQUESTS
+        fromService: { type: web, name: synphonie, envVarKey: MAX_AI_REQUESTS }
+      - key: AI_AUTO_EVALUATION
+        fromService: { type: web, name: synphonie, envVarKey: AI_AUTO_EVALUATION }
+      - key: AI_MANUAL_REVIEW
+        fromService: { type: web, name: synphonie, envVarKey: AI_MANUAL_REVIEW }
