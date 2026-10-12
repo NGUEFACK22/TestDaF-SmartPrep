@@ -62,11 +62,21 @@ services:
         sync: false
       - key: AWS_ENDPOINT
         sync: false # ex. https://<account-id>.r2.cloudflarestorage.com
-      # --- IA (optionnel) ---
+      # --- IA (fournisseur actif : Groq) ---
       - key: AI_ENABLED
-        value: false
-      - key: GEMINI_API_KEY
-        sync: false
+        value: true
+      - key: AI_PROVIDER
+        value: groq
+      - key: GROQ_API_KEY
+        sync: false # ex. gsk_... (à renseigner une seule fois)
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-20b
+      - key: MAX_AI_REQUESTS
+        value: 100
+      - key: AI_AUTO_EVALUATION
+        value: true
+      - key: AI_MANUAL_REVIEW
+        value: true
 
   # File d'attente + planificateur (abandons, purges) : 1 job/min traite
   # UN job en attente puis le scheduler (largement suffisant en gratuit).
