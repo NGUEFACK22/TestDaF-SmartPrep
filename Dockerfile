@@ -16,7 +16,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         nginx supervisor curl unzip \
-        libpq-dev libzip-dev zlib1g-dev libpng-dev libicu-dev \
+        libpq-dev libzip-dev zlib1g-dev libpng-dev libicu-dev libonig-dev \
     && docker-php-ext-install -j"$(nproc)" \
         pdo pdo_mysql pdo_pgsql mbstring zip exif pcntl bcmath intl opcache \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
