@@ -15,7 +15,7 @@ services:
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
-        value: false
+        value: true # TEMPORAIRE (diagnostic) : passer à false après correction
       - key: APP_URL
         sync: false # ex. https://synphonie.onrender.com (à renseigner après le 1er déploiement)
       - key: APP_KEY
@@ -23,7 +23,7 @@ services:
       - key: LOG_CHANNEL
         value: stderr
       - key: LOG_LEVEL
-        value: warning
+        value: debug
       # --- Base Neon (Postgres serverless, offre gratuite) ---
       - key: DB_CONNECTION
         value: pgsql
