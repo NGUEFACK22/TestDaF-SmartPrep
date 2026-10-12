@@ -28,7 +28,7 @@ services:
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST
-        sync: false # endpoint pooler Neon, ex. ep-xxx-pooler.eu-central-1.aws.neon.tech
+        value: ep-broad-queen-b5lqx7x0.c-7.us-east-2.aws.neon.tech # endpoint DIRECT Neon (le pooler casse les transactions : SQLSTATE[25P02])
       - key: DB_PORT
         value: 5432
       - key: DB_DATABASE
