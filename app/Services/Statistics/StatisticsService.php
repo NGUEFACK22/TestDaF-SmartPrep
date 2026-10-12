@@ -179,7 +179,7 @@ class StatisticsService
                 ->join('questions', 'questions.id', '=', 'user_answers.question_id')
                 ->where('user_answers.user_id', $user->id)
                 ->whereNotNull('user_answers.is_correct')
-                ->selectRaw('questions.type as type, COUNT(*) as total, SUM(CASE WHEN user_answers.is_correct = 0 THEN 1 ELSE 0 END) as errors')
+                ->selectRaw('questions.type as type, COUNT(*) as total, SUM(CASE WHEN user_answers.is_correct = false THEN 1 ELSE 0 END) as errors')
                 ->groupBy('questions.type')
                 ->get();
 
