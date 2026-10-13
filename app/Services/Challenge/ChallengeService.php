@@ -19,6 +19,7 @@ use App\Models\Setting;
 use App\Services\AI\GeminiService;
 use App\Services\Statistics\StatisticsService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * ChallengeService — Espace Élite (Défi IA).
@@ -36,6 +37,9 @@ class ChallengeService
         private GeminiService $gemini,
         private StatisticsService $statistics,
     ) {}
+
+    /** Un modèle de secours est-il intervenu avec un échec transitoire ? */
+    private bool $retryableFailure = false;
 
     /** Quota journalier de générations IA (Setting admin, défaut .env). */
     public function quotaLimit(): int
@@ -216,12 +220,12 @@ class ChallengeService
         }
 
         $min = (int) config('testdaf.challenge.min_questions', 20);
-        $items = $this->fetchItems($challenge, $min);
+        $items = $this->fetchItemsWithFallback($challenge, $min);
 
         if (count($items) < $min) {
             // Échec transitoire (quota API 429, surcharge 5xx) : message adapté,
             // inutile de gaspiller un 2e appel collé au 1er (il échouerait pareil).
-            if ($this->gemini->lastRetryable()) {
+            if ($this->retryableFailure) {
                 $status = (int) ($this->gemini->lastError()['status'] ?? 0);
 
                 return $this->markFailed(
@@ -255,13 +259,77 @@ class ChallengeService
         return $challenge->refresh();
     }
 
-    /** L'échec du dernier appel IA est-il transitoire (429/413 quota, 5xx) → réessayer plus tard. */
+    /** L'échec de la génération est-il transitoire (429/413 quota, 5xx) → réessayer plus tard. */
     public function lastErrorRetryable(): bool
     {
-        return $this->gemini->lastRetryable();
+        return $this->retryableFailure;
     }
 
     // ---------------------------------------------------------- interne
+
+    /**
+     * Chaîne de modèles IA essayés dans l'ordre (Groq) : le modèle principal
+     * d'abord, puis les modèles de secours si le précédent ne répond pas
+     * (quota/surcharge, modèle indisponible, JSON incomplet ou vide).
+     * Fournisseur Gemini : un seul passage avec le modèle configuré.
+     */
+    private function modelChain(): array
+    {
+        if ((string) config('testdaf.ai.provider') !== 'groq') {
+            return [null];
+        }
+
+        $primary = trim((string) config('testdaf.ai.groq_model'));
+        $fallbacks = array_values(array_filter(array_map('trim', (array) config('testdaf.ai.groq_fallback_models', []))));
+
+        return array_values(array_unique(array_merge($primary !== '' ? [$primary] : [], $fallbacks)));
+    }
+
+    /**
+     * Génère les QCM en passant au modèle suivant si le précédent n'en fournit
+     * pas assez. Retourne le meilleur jeu obtenu (>= min dès le 1er succès).
+     */
+    private function fetchItemsWithFallback(AiChallenge $challenge, int $min): array
+    {
+        $chain = $this->modelChain();
+        $this->retryableFailure = false;
+        $best = [];
+        $essais = [];
+
+        foreach ($chain as $model) {
+            if ($model !== null) {
+                $this->gemini->setModel($model);
+            }
+            $items = $this->fetchItems($challenge, $min);
+            $status = (int) ($this->gemini->lastError()['status'] ?? 0);
+
+            if (count($items) >= $min) {
+                Log::info('ChallengeService: défi généré avec le modèle « '.($model ?? 'défaut').' »', [
+                    'challenge' => $challenge->id,
+                    'questions' => count($items),
+                ]);
+
+                return $items;
+            }
+
+            $this->retryableFailure = $this->retryableFailure || $this->gemini->lastRetryable();
+            $essais[] = ['modele' => $model ?? '(défaut)', 'questions' => count($items), 'status' => $status];
+
+            if (count($items) > count($best)) {
+                $best = $items;
+            }
+        }
+
+        if (array_filter($chain, fn ($m) => $m !== null)) {
+            $this->gemini->setModel(null);
+        }
+        Log::warning('ChallengeService: aucun modèle disponible n\'a fourni assez de QCM.', [
+            'challenge' => $challenge->id,
+            'essais' => $essais,
+        ]);
+
+        return $best;
+    }
 
     /** Appelle l'IA (+1 relance de complétion si < min et échec non transitoire). */
     private function fetchItems(AiChallenge $challenge, int $min): array

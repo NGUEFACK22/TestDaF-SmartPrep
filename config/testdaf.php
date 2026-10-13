@@ -60,6 +60,13 @@ return [
         'gemini_endpoint' => env('GEMINI_ENDPOINT', 'https://generativelanguage.googleapis.com/v1beta'),
         'groq_api_key' => env('GROQ_API_KEY'),
         'groq_model' => env('GROQ_MODEL', 'qwen/qwen3.8-27b'),
+        // Modèles essayés automatiquement si le modèle principal ne répond pas
+        // (quota/surcharge, modèle indisponible, JSON incomplet). Ordre de
+        // préférence, séparés par des virgules (variable GROQ_FALLBACK_MODELS).
+        'groq_fallback_models' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('GROQ_FALLBACK_MODELS', 'openai/gpt-oss-20b,openai/gpt-oss-120b,allam-2-7b'))
+        ))),
         'groq_endpoint' => env('GROQ_ENDPOINT', 'https://api.groq.com/openai/v1'),
         'whisper_endpoint' => env('WHISPER_ENDPOINT'),
         'languagetool_url' => env('LANGUAGETOOL_API_URL', 'https://api.languagetool.org/v2'),

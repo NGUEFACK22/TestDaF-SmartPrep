@@ -90,6 +90,15 @@ class ChallengeTest extends TestCase
         return $items;
     }
 
+    /** Chaîne de modèles Groq (principal + secours), telle que résolue par config. */
+    private function aiModelChain(): array
+    {
+        return array_values(array_unique(array_merge(
+            [trim((string) config('testdaf.ai.groq_model'))],
+            array_values(array_filter(array_map('trim', (array) config('testdaf.ai.groq_fallback_models', []))))
+        )));
+    }
+
     public function test_two_consecutive_perfect_scores_unlock_elite(): void
     {
         $this->playPerfect();
@@ -116,6 +125,8 @@ class ChallengeTest extends TestCase
         $this->mock(GeminiService::class, function ($mock) {
             $mock->shouldReceive('enabled')->andReturn(true);
             $mock->shouldReceive('generateJson')->once()->andReturn($this->fakeItems(20));
+            $mock->shouldReceive('setModel')->andReturnNull();
+            $mock->shouldReceive('lastError')->andReturn(['status' => 200, 'body' => 'ok']);
         });
 
         ChallengeUnlock::create([
@@ -169,6 +180,8 @@ class ChallengeTest extends TestCase
         $this->mock(GeminiService::class, function ($mock) {
             $mock->shouldReceive('enabled')->andReturn(true);
             $mock->shouldReceive('generateJson')->once()->andReturn($this->fakeItems(20, 500));
+            $mock->shouldReceive('setModel')->andReturnNull();
+            $mock->shouldReceive('lastError')->andReturn(['status' => 200, 'body' => 'ok']);
         });
 
         // C2 : aucune banque, génération directe sans condition de score.
@@ -196,10 +209,17 @@ class ChallengeTest extends TestCase
     {
         $this->mock(GeminiService::class, function ($mock) {
             $mock->shouldReceive('enabled')->andReturn(true);
-            $mock->shouldReceive('generateJson')->twice()->andReturnValues([
-                $this->fakeItems(5), $this->fakeItems(5, 100),
-            ]);
+            // Chaque modèle de la chaîne échoue aussi (initial + complément < min).
+            $chain = $this->aiModelChain();
+            $calls = [];
+            for ($i = 0; $i < count($chain); $i++) {
+                $calls[] = $this->fakeItems(5);
+                $calls[] = $this->fakeItems(5, 100);
+            }
+            $mock->shouldReceive('generateJson')->times(count($calls))->andReturnValues($calls);
             $mock->shouldReceive('lastRetryable')->andReturn(false);
+            $mock->shouldReceive('setModel')->andReturnNull();
+            $mock->shouldReceive('lastError')->andReturn(['status' => 200, 'body' => 'json invalide']);
         });
 
         $challenge = AiChallenge::create([
@@ -222,10 +242,11 @@ class ChallengeTest extends TestCase
     {
         $gemini = $this->mock(GeminiService::class, function ($mock) {
             $mock->shouldReceive('enabled')->andReturn(true);
-            // 429 répété : UN seul appel (la relance immédiate est inutile).
-            $mock->shouldReceive('generateJson')->once()->andReturn(null);
+            // 429 répété sur TOUTE la chaîne de secours : aucun modèle ne répond.
+            $mock->shouldReceive('generateJson')->times(count($this->aiModelChain()))->andReturn(null);
             $mock->shouldReceive('lastRetryable')->andReturn(true);
             $mock->shouldReceive('lastError')->andReturn(['status' => 429, 'body' => 'quota']);
+            $mock->shouldReceive('setModel')->andReturnNull();
         });
 
         $challenge = AiChallenge::create([

@@ -16,6 +16,15 @@ class GeminiService
     /** Dernier échec d'appel (status HTTP + extrait), null si dernier appel OK. */
     protected ?array $lastError = null;
 
+    /** Modèle forcé pour le prochain appel (fournisseur compatible), null = défaut config. */
+    protected ?string $modelOverride = null;
+
+    /** Force le modèle du prochain appel (ex. bascule automatique de secours). */
+    public function setModel(?string $model): void
+    {
+        $this->modelOverride = $model;
+    }
+
     public function enabled(): bool
     {
         return (bool) config('testdaf.ai.enabled')

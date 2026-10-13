@@ -30,7 +30,7 @@ class GroqService extends GeminiService
             return null;
         }
 
-        $model = config('testdaf.ai.groq_model');
+        $model = $this->modelOverride ?? config('testdaf.ai.groq_model');
         $endpoint = rtrim((string) config('testdaf.ai.groq_endpoint'), '/');
         $url = "{$endpoint}/chat/completions";
 
