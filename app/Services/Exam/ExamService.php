@@ -382,23 +382,50 @@ class ExamService
     {
         $question->loadMissing('answerOptions');
 
-        // Ordre d'affichage : brassé par graine (positions différentes).
-        $ordered = $question->answerOptions
-            ->sortBy(fn ($o) => md5($seed.':'.$o->getKey()))
-            ->values();
+        $options = $question->answerOptions;
 
         // Jeu de lettres trié (insensible à toute mutation préalable).
-        $base = $question->answerOptions
+        $base = $options
             ->map(fn ($o) => (string) $o->label)
             ->sort()
             ->values()->all();
 
         $n = max(1, count($base));
 
+        $correct = $options->filter(fn ($o) => (bool) $o->is_correct)->values();
+
+        // QCM à une seule bonne réponse : on répartit la bonne réponse sur
+        // toutes les lettres. Sa position à l'écran = (position de la question
+        // dans l'exercice + cran de rotation du tour) % nombre d'options, donc
+        // les bonnes réponses tournent sur a, b, c, d (5× chacune pour 20
+        // questions) et changent de lettre à chaque tentative. Les autres
+        // options restent brassées par graine.
+        if ($n > 1 && $correct->count() === 1) {
+            $good = $correct->first();
+            $others = $options
+                ->reject(fn ($o) => $o->getKey() === $good->getKey())
+                ->sortBy(fn ($o) => md5($seed.':'.$o->getKey()))
+                ->values();
+
+            $slot = (((int) $question->position) + ((int) $rotation)) % $n;
+
+            $ordered = [];
+            for ($i = 0; $i < $n; $i++) {
+                $ordered[] = $i === $slot ? $good : $others->shift();
+            }
+        } else {
+            // Autres types (plusieurs bonnes réponses, etc.) : ordre d'affichage
+            // uniquement brassé par graine.
+            $ordered = $options
+                ->sortBy(fn ($o) => md5($seed.':'.$o->getKey()))
+                ->values()
+                ->all();
+        }
+
         // Lettre = position à l'écran : l'option affichée en 1er porte
         // toujours la lettre $base[0], la suivante $base[1], etc.
         $out = [];
-        foreach ($ordered->values() as $i => $option) {
+        foreach ($ordered as $i => $option) {
             $out[] = [
                 'id' => $option->getKey(),
                 'label' => $base[$i % $n],
