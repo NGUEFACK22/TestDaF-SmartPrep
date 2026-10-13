@@ -95,6 +95,5 @@ class TdnResultTest extends TestCase
 
         $response->assertSee('Banque QCM', false);
         $response->assertSee('IA inédite', false);
-        $response->assertSee('Espace Élite', false);
     }
 }

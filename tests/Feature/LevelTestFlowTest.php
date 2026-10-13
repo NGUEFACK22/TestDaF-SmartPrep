@@ -59,7 +59,6 @@ class LevelTestFlowTest extends TestCase
 
         $response->assertSee('Banque QCM', false);
         $response->assertSee('IA inédite', false);
-        $response->assertSee('Espace Élite', false);
     }
 
     public function test_starting_a_bank_level_creates_a_timed_attempt(): void

@@ -42,14 +42,4 @@ return Application::configure(basePath: dirname(__DIR__))
 
             return back()->with('error', $e->getMessage());
         });
-
-        // DIAGNOSTIC TEMPORAIRE : affiche l'erreur réelle dans l'environnement Render
-        // (détecté via SESSION_DRIVER=database, indépendant de APP_DEBUG qui arrive vide).
-        $exceptions->render(function (Throwable $e, $request) {
-            if (env('SESSION_DRIVER') === 'database' && ! $e instanceof ExamException) {
-                return response("<pre>ERROR: ".get_class($e)."\n".$e->getMessage()."\n".$e->getFile().':'.$e->getLine()."\n</pre>", 500);
-            }
-
-            return null;
-        });
     })->create();

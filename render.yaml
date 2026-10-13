@@ -15,7 +15,7 @@ services:
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
-        value: true # TEMPORAIRE (diagnostic) : passer à false après correction
+        value: false
       - key: APP_URL
         value: https://testdaf-smartprep.onrender.com
       - key: APP_KEY
@@ -23,7 +23,7 @@ services:
       - key: LOG_CHANNEL
         value: stderr
       - key: LOG_LEVEL
-        value: debug
+        value: warning
       # --- Base Neon (Postgres serverless, offre gratuite) ---
       - key: DB_CONNECTION
         value: pgsql
