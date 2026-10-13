@@ -65,6 +65,20 @@ Route::get('/__diag', function (\Illuminate\Http\Request $request) {
         }
     }
 
+    if ($request->boolean('cli')) {
+        $out = [];
+        $rc = 0;
+        @exec('php /var/www/html/artisan queue:work --once --stop-when-empty --tries=1 --no-interaction 2>&1', $out, $rc);
+        $data['cli_exit'] = $rc;
+        $data['cli_output'] = implode("\n", $out);
+    }
+
+    $logFile = '/var/www/html/storage/logs/worker.out';
+    if (is_file($logFile)) {
+        $lines = @file($logFile, FILE_IGNORE_NEW_LINES) ?: [];
+        $data['worker_out_tail'] = array_slice($lines, -40);
+    }
+
     return response()->json($data, 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 })->middleware('throttle:20,1');
 
