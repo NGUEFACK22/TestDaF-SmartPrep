@@ -166,4 +166,46 @@ class OptionShuffleTest extends TestCase
             $response->assertSee($opt->text, false);
         }
     }
+
+    public function test_training_letters_are_ordered_balanced_and_shuffled(): void
+    {
+        $engine = app(ExamService::class);
+
+        $questions = Question::with('answerOptions')
+            ->whereIn('type', ['single_choice', 'true_false'])
+            ->get()
+            ->filter(fn ($q) => $q->answerOptions->where('is_correct', true)->count() === 1
+                && $q->answerOptions->count() >= 2)
+            ->take(8)
+            ->values();
+
+        $this->assertGreaterThanOrEqual(4, $questions->count(), 'Assez de QCM pour mesurer la répartition.');
+
+        $lettersFor = function (string $seed) use ($engine, $questions) {
+            $letters = [];
+            foreach ($questions as $q) {
+                $displayed = $engine->displayOptionsForExercise($q, $seed);
+                $labels = array_column($displayed, 'label');
+
+                $sorted = $labels;
+                sort($sorted);
+                $this->assertSame($sorted, $labels, 'Lettres dans l\'ordre en entraînement.');
+
+                $byId = $q->answerOptions->keyBy('id');
+                foreach ($displayed as $opt) {
+                    if ($byId[$opt['id']]->is_correct) {
+                        $letters[] = $opt['label'];
+                    }
+                }
+            }
+
+            return $letters;
+        };
+
+        $a = $lettersFor('train-seed-A');
+        $b = $lettersFor('train-seed-B');
+
+        $this->assertGreaterThanOrEqual(2, count(array_unique($a)), 'Les bonnes réponses varient de lettre.');
+        $this->assertNotSame($a, $b, 'La disposition change d\'une visite à l\'autre (brassage).');
+    }
 }

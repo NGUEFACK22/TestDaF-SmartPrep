@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AiController;
 use App\Http\Controllers\Admin\ExerciseController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\UserController;
@@ -120,6 +121,9 @@ Route::middleware('auth')->group(function () {
         Route::resource('exercises', ExerciseController::class)->except(['show']);
 
         Route::get('users', [UserController::class, 'index'])->name('users.index');
+
+        Route::get('ai', [AiController::class, 'index'])->name('ai.index');
+        Route::post('ai/{challenge}/retry', [AiController::class, 'retry'])->name('ai.retry');
 
         Route::get('settings', [SettingController::class, 'edit'])->name('settings.edit');
         Route::put('settings', [SettingController::class, 'update'])->name('settings.update');

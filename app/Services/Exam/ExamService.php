@@ -388,88 +388,105 @@ class ExamService
     }
 
     /**
+     * Options d'un exercice en mode entraînement : lettres équilibrées par
+     * exercice et en désordre. Le tirage est recalculé à chaque affichage
+     * ($seed change à chaque visite) → la position des bonnes réponses varie.
+     */
+    public function displayOptionsForExercise(\App\Models\Question $question, string $seed): array
+    {
+        return array_map(
+            fn ($row) => ['id' => $row['id'], 'label' => $row['label'], 'text' => $row['text']],
+            $this->computeDisplayed(
+                $question,
+                $seed,
+                0,
+                $this->balancedSlotForExercise($question, "train:{$seed}")
+            )
+        );
+    }
+
+    /**
      * Emplacement cible (0..n-1) de la bonne réponse pour la tentative :
      * tirage équilibré et mélangé sur chaque groupe de QCM à une seule bonne
      * réponse (ex. 20 questions × 4 options → 5× chaque lettre, en désordre).
-     * Null si la question n'est pas concernée (vrai/faux inclus).
+     * Null si la question n'est pas concernée (plusieurs bonnes réponses, …).
      */
     private function balancedSlot(\App\Models\Question $question, Attempt $attempt): ?int
+    {
+        return $this->balancedSlotForExercise($question, "attempt:{$attempt->id}");
+    }
+
+    /** Emplacement cible (0..n-1) d'un QCM à une seule bonne réponse. */
+    private function balancedSlotForExercise(\App\Models\Question $question, string $keyPrefix): ?int
     {
         $question->loadMissing('answerOptions');
 
         $options = $question->answerOptions;
-        $n = count($options);
 
-        if ($n < 2 || $options->filter(fn ($o) => (bool) $o->is_correct)->count() !== 1) {
+        if (count($options) < 2 || $options->filter(fn ($o) => (bool) $o->is_correct)->count() !== 1) {
             return null;
         }
 
-        return $this->balancedSlotMap($attempt)[(int) $question->getKey()] ?? null;
+        $exercise = $question->exercise;
+        if (! $exercise) {
+            return null;
+        }
+
+        return $this->balancedSlotsForExercise($exercise, $keyPrefix)[(int) $question->getKey()] ?? null;
     }
 
     /**
-     * Cartographie question → emplacement équilibré pour toute la tentative.
-     * Recalculable à tout moment (affichage, correction, résultats) : le sac
-     * de lettres est brassé avec la même graine, donc stable entre appels.
+     * Cartographie question → emplacement équilibré, par groupe de QCM à une
+     * seule bonne réponse de l'exercice. Brasage déterministe (graine =
+     * $keyPrefix) : recalculable à tout moment avec la même clé — affichage,
+     * correction, résultats restent cohérents.
      */
-    private function balancedSlotMap(Attempt $attempt): array
+    private function balancedSlotsForExercise(\App\Models\Exercise $exercise, string $keyPrefix): array
     {
         static $cache = [];
 
-        $attemptId = (int) $attempt->id;
-        if (isset($cache[$attemptId])) {
-            return $cache[$attemptId];
+        if (isset($cache[$keyPrefix])) {
+            return $cache[$keyPrefix];
         }
 
         $map = [];
 
-        $attempt->loadMissing('attemptExercises.exercise');
-        foreach ($attempt->attemptExercises as $ae) {
-            $exercise = $ae->exercise;
-            if (! $exercise) {
-                continue;
-            }
+        $questions = $exercise->questions()->with('answerOptions')->orderBy('position')->get();
 
-            $questions = $exercise->questions()
-                ->with('answerOptions')
-                ->orderBy('position')
-                ->get();
-
-            // Regroupe par nombre d'options pour équilibrer séparément chaque
-            // groupe (les 20 QCM à 4 options du Défi → 5× a, 5× b, 5× c, 5× d).
-            $groups = [];
-            foreach ($questions as $q) {
-                $count = $q->answerOptions->count();
-                if ($count > 1
-                    && $q->answerOptions->filter(fn ($o) => (bool) $o->is_correct)->count() === 1) {
-                    $groups[$count][] = $q;
-                }
-            }
-
-            foreach ($groups as $n => $qs) {
-                $k = count($qs);
-                $pool = [];
-                for ($s = 0; $s < $n; $s++) {
-                    $pool = array_merge(
-                        $pool,
-                        array_fill(0, intdiv($k, $n) + ($s < $k % $n ? 1 : 0), $s)
-                    );
-                }
-
-                // Brassage déterministe du sac de lettres (aucun cycle visible).
-                $seeded = [];
-                foreach ($pool as $i => $s) {
-                    $seeded[] = [md5("attempt:{$attemptId}::{$ae->exercise_id}:n:{$n}:i:{$i}"), $s, $i];
-                }
-                usort($seeded, fn ($a, $b) => strcmp($a[0], $b[0]) ?: ($a[2] <=> $b[2]));
-
-                foreach ($qs as $idx => $q) {
-                    $map[(int) $q->getKey()] = $seeded[$idx][1];
-                }
+        // Regroupe par nombre d'options pour équilibrer séparément chaque
+        // groupe (les 20 QCM à 4 options du Défi → 5× a, 5× b, 5× c, 5× d).
+        $groups = [];
+        foreach ($questions as $q) {
+            $count = $q->answerOptions->count();
+            if ($count > 1
+                && $q->answerOptions->filter(fn ($o) => (bool) $o->is_correct)->count() === 1) {
+                $groups[$count][] = $q;
             }
         }
 
-        return $cache[$attemptId] = $map;
+        foreach ($groups as $n => $qs) {
+            $k = count($qs);
+            $pool = [];
+            for ($s = 0; $s < $n; $s++) {
+                $pool = array_merge(
+                    $pool,
+                    array_fill(0, intdiv($k, $n) + ($s < $k % $n ? 1 : 0), $s)
+                );
+            }
+
+            // Brassage déterministe du sac de lettres (aucun cycle visible).
+            $seeded = [];
+            foreach ($pool as $i => $s) {
+                $seeded[] = [md5("{$keyPrefix}::{$exercise->id}:n:{$n}:i:{$i}"), $s, $i];
+            }
+            usort($seeded, fn ($a, $b) => strcmp($a[0], $b[0]) ?: ($a[2] <=> $b[2]));
+
+            foreach ($qs as $idx => $q) {
+                $map[(int) $q->getKey()] = $seeded[$idx][1];
+            }
+        }
+
+        return $cache[$keyPrefix] = $map;
     }
 
     /**

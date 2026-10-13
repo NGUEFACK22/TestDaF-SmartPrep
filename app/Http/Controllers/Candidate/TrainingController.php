@@ -21,12 +21,14 @@ class TrainingController extends Controller
         $exercise->load('questions.answerOptions', 'solutions');
 
         // Brassage des réponses à chaque affichage : le contenu change de
-        // place, les LETTRES restent dans l'ordre (a, b, c, … de haut en bas).
+        // place, les LETTRES restent dans l'ordre (a, b, c, … de haut en bas)
+        // et les bonnes réponses sont réparties à parts égales, en désordre
+        // (tirage recalculé à chaque visite).
         $engine = app(ExamService::class);
         $seed = bin2hex(random_bytes(6));
 
         foreach ($exercise->questions as $question) {
-            $displayed = $engine->displayOptions($question, $seed);
+            $displayed = $engine->displayOptionsForExercise($question, $seed);
             $byId = collect($displayed)->keyBy('id');
 
             $question->setRelation(

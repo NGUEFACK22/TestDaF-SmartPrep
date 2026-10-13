@@ -41,6 +41,9 @@ class ChallengeService
     /** Un modèle de secours est-il intervenu avec un échec transitoire ? */
     private bool $retryableFailure = false;
 
+    /** Modèle IA ayant effectivement produit les QCM (traçabilité). */
+    private ?string $usedModel = null;
+
     /** Quota journalier de générations IA (Setting admin, défaut .env). */
     public function quotaLimit(): int
     {
@@ -248,7 +251,7 @@ class ChallengeService
             ->flatMap(fn ($e) => $e->questions)
             ->count();
 
-        $challenge->update(['status' => 'ready', 'completed_at' => now()]);
+        $challenge->update(['status' => 'ready', 'completed_at' => now(), 'generated_with' => $this->usedModel]);
 
         try {
             $challenge->user->notify(new ChallengeReady($challenge->id, $questionCount));
@@ -293,6 +296,7 @@ class ChallengeService
     {
         $chain = $this->modelChain();
         $this->retryableFailure = false;
+        $this->usedModel = null;
         $best = [];
         $essais = [];
 
@@ -304,6 +308,7 @@ class ChallengeService
             $status = (int) ($this->gemini->lastError()['status'] ?? 0);
 
             if (count($items) >= $min) {
+                $this->usedModel = $model;
                 Log::info('ChallengeService: défi généré avec le modèle « '.($model ?? 'défaut').' »', [
                     'challenge' => $challenge->id,
                     'questions' => count($items),

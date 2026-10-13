@@ -44,6 +44,7 @@
     <div class="grid sm:grid-cols-3 gap-4 mt-6">
         <a href="{{ route('admin.exercises.index') }}" class="btn rounded-lg bg-slate-900 text-white text-center px-4 py-3 text-sm font-medium hover:bg-slate-700">Exercices</a>
         <a href="{{ route('admin.users.index') }}" class="btn rounded-lg bg-slate-900 text-white text-center px-4 py-3 text-sm font-medium hover:bg-slate-700">Utilisateurs</a>
+        <a href="{{ route('admin.ai.index') }}" class="btn rounded-lg bg-slate-900 text-white text-center px-4 py-3 text-sm font-medium hover:bg-slate-700">Suivi IA</a>
         <a href="{{ route('admin.settings.edit') }}" class="btn rounded-lg bg-slate-900 text-white text-center px-4 py-3 text-sm font-medium hover:bg-slate-700">Paramètres IA</a>
     </div>
 

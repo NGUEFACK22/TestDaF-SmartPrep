@@ -12,7 +12,7 @@ class AiChallenge extends Model
 
     protected $fillable = [
         'user_id', 'modell_test_id', 'skill', 'status', 'level',
-        'weak_snapshot', 'generated_test_id', 'error',
+        'weak_snapshot', 'generated_test_id', 'generated_with', 'error',
         'requested_at', 'completed_at',
     ];
 
