@@ -54,7 +54,7 @@ class OptionShuffleTest extends TestCase
         );
     }
 
-    public function test_shuffle_keeps_all_options_with_their_labels(): void
+    public function test_letters_stay_ordered_while_content_shuffles(): void
     {
         $engine = app(ExamService::class);
         $question = Question::where('type', 'single_choice')->firstOrFail();
@@ -62,14 +62,21 @@ class OptionShuffleTest extends TestCase
         $shuffled = $engine->displayOptions($question, 'seed-y');
         $original = $question->answerOptions->map(fn ($o) => ['id' => $o->id, 'label' => $o->label, 'text' => $o->text])->all();
 
-        // Même contenu (ids + libellés + textes liés), seul l'ordre change.
+        // Même contenu (mêmes ids), seul l'ordre d'affichage change.
         $this->assertEqualsCanonicalizing(
             array_column($original, 'id'),
             array_column($shuffled, 'id')
         );
+
+        // Les LETTRES affichées restent dans l'ordre (a, b, c, d de haut en bas).
+        $labels = array_column($shuffled, 'label');
+        $sorted = $labels;
+        sort($sorted);
+        $this->assertSame($sorted, $labels, 'Les lettres affichées doivent rester dans l\'ordre.');
+
+        // Chaque option garde son texte ; seule la lettre portée suit l'écran.
         foreach ($shuffled as $opt) {
             $ref = collect($original)->firstWhere('id', $opt['id']);
-            $this->assertSame($ref['label'], $opt['label']);
             $this->assertSame($ref['text'], $opt['text']);
         }
     }
@@ -112,9 +119,10 @@ class OptionShuffleTest extends TestCase
             'Payload et vue : même ordre pour la même tentative.'
         );
 
-        // Répondre avec le libellé (valeur, pas position) reste correct.
+        // Répondre avec le libellé affiché (valeur, pas position) reste correct.
         foreach ($ae->formQuestions() as $q) {
-            $answers->save($attempt, $ae->fresh(), $q, $q->correct_answer);
+            $shown = $engine->displayedCorrectLabels($q, $attempt->fresh());
+            $answers->save($attempt, $ae->fresh(), $q, $shown !== [] ? $shown : (array) $q->correct_answer);
             $engine->advanceQuestion($attempt, $ae->fresh());
         }
         $engine->completeExercise($attempt, $ae->exercise_id);

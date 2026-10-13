@@ -43,9 +43,10 @@ class ExamService
         }
 
         return DB::transaction(function () use ($user, $test, $mode) {
-            // Rotation des LETTRES correctes : compte les tours précédents du
-            // candidat sur ce test. Chaque nouveau tour tourne d'un cran, donc
-            // la bonne lettre n'est jamais la même deux tours de suite.
+            // Tours précédents : le brassage des options (graine = tentative +
+            // question) suffit à faire varier les lettres. Le compteur est
+            // conservé pour que les lettres déjà affichées lors des tentatives
+            // antérieures restent recalculables à l'identique.
             $previousRounds = $user->attempts()
                 ->where('modell_test_id', $test->id)
                 ->count();
@@ -332,13 +333,15 @@ class ExamService
     }
 
     /**
-     * Options affichées : ordre brassé + rotation optionnelle des LETTRES
-     * (rotation = 0 → comportement historique : libellés d'origine).
+     * Options affichées : contenu brassé par graine (positions différentes par
+     * tentative/question), LETTRES toujours dans l'ordre du curseur (1re option
+     * affichée = 'a', suivante = 'b', …).
      *
-     * Garantie clé : la lettre affichée de la bonne réponse ne dépend QUE de
-     * l'ordre canonique (ids triés) et du cran de rotation — jamais de
-     * l'ordre d'affichage (qui, lui, est re-brassé à part). Tour N+1 ≠ tour N.
-     * Le tout est DÉTERMINISTE : stable pendant toute la tentative.
+     * La lettre d'une option est celle de sa position à l'écran : la bonne
+     * réponse porte donc la lettre de l'endroit où son contenu a atterri. Elle
+     * varie d'une question à l'autre et d'une tentative à l'autre (graine
+     * distincte), sans jamais désordonner l'alphabet. Correction et résultats
+     * utilisent le même calcul — déterministe, stable pendant la tentative.
      */
     public function displayOptions(\App\Models\Question $question, string $seed, int $rotation = 0): array
     {
@@ -384,33 +387,21 @@ class ExamService
             ->sortBy(fn ($o) => md5($seed.':'.$o->getKey()))
             ->values();
 
-        // Ordre canonique : ids triés (stable d'un tour à l'autre).
-        $canonIds = $question->answerOptions
-            ->sortBy(fn ($o) => $o->getKey())
-            ->map(fn ($o) => $o->getKey())
-            ->values()->all();
-
         // Jeu de lettres trié (insensible à toute mutation préalable).
         $base = $question->answerOptions
             ->map(fn ($o) => (string) $o->label)
             ->sort()
             ->values()->all();
 
-        $n = count($base);
-        $shift = $n > 1 ? ($rotation % $n) : 0;
+        $n = max(1, count($base));
 
+        // Lettre = position à l'écran : l'option affichée en 1er porte
+        // toujours la lettre $base[0], la suivante $base[1], etc.
         $out = [];
-        foreach ($ordered as $option) {
-            // Index canonique de l'option : la lettre affichée tourne avec
-            // le compteur de tours, indépendamment de la position à l'écran.
-            $canonIndex = array_search($option->getKey(), $canonIds, true);
-            $canonIndex = $canonIndex === false ? 0 : (int) $canonIndex;
-
+        foreach ($ordered->values() as $i => $option) {
             $out[] = [
                 'id' => $option->getKey(),
-                'label' => $shift === 0
-                    ? (string) $option->label
-                    : $base[($canonIndex + $shift) % $n],
+                'label' => $base[$i % $n],
                 'text' => $option->text,
                 'is_correct' => (bool) $option->is_correct,
             ];

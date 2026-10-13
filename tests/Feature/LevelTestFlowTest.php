@@ -132,7 +132,8 @@ class LevelTestFlowTest extends TestCase
             $outcome = null;
 
             foreach ($task->formQuestions() as $question) {
-                $answers->save($attempt->fresh(), $task->fresh(), $question, (array) $question->correct_answer);
+                $shown = $engine->displayedCorrectLabels($question, $attempt->fresh());
+                $answers->save($attempt->fresh(), $task->fresh(), $question, $shown !== [] ? $shown : (array) $question->correct_answer);
                 $outcome = $engine->advanceQuestion($attempt->fresh(), $task->fresh())['outcome'];
             }
 

@@ -135,7 +135,8 @@ class ExamSyncTest extends TestCase
             $task = $task->fresh();
 
             foreach ($task->formQuestions() as $question) {
-                $answers->save($attempt->fresh(), $task->fresh(), $question, (array) $question->correct_answer);
+                $shown = $engine->displayedCorrectLabels($question, $attempt->fresh());
+                $answers->save($attempt->fresh(), $task->fresh(), $question, $shown !== [] ? $shown : (array) $question->correct_answer);
                 $engine->advanceQuestion($attempt->fresh(), $task->fresh());
             }
         }

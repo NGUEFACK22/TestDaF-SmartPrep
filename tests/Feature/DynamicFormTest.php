@@ -220,7 +220,8 @@ class DynamicFormTest extends TestCase
         // Répond correctement à chaque question de la forme, en suivant le
         // chronomètre par question (réponse courante puis avancement serveur).
         foreach ($ae->formQuestions() as $question) {
-            $answers->save($attempt, $ae->fresh(), $question, $question->correct_answer);
+            $shown = $engine->displayedCorrectLabels($question, $attempt->fresh());
+            $answers->save($attempt, $ae->fresh(), $question, $shown !== [] ? $shown : $question->correct_answer);
             $engine->advanceQuestion($attempt, $ae->fresh());
         }
 

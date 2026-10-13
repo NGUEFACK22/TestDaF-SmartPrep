@@ -157,7 +157,8 @@ class ExamEngineTest extends TestCase
         $ae = $engine->startExercise($attempt, $first->exercise_id);
 
         foreach ($ae->formQuestions() as $question) {
-            $answers->save($attempt, $ae->fresh(), $question, $question->correct_answer);
+            $shown = $engine->displayedCorrectLabels($question, $attempt->fresh());
+            $answers->save($attempt, $ae->fresh(), $question, $shown !== [] ? $shown : (array) $question->correct_answer);
             $engine->advanceQuestion($attempt, $ae->fresh());
         }
 

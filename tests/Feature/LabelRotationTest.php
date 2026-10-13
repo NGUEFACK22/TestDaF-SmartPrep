@@ -15,9 +15,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Rotation des LETTRES correctes d'un tour à l'autre :
- * si un tour la bonne réponse est A, au tour suivant c'est B/C/D (plus A).
- * La correction dé-rotate avant de noter : le score reste juste.
+ * Lettres affichées : toujours dans l'ordre (a, b, c, d de haut en bas) ;
+ * la bonne réponse porte la lettre de la position où son contenu a atterri
+ * (brassage par graine). Elle varie d'une question à l'autre et d'une
+ * tentative à l'autre, la correction utilisant les mêmes lettres affichées.
  */
 class LabelRotationTest extends TestCase
 {
@@ -59,7 +60,7 @@ class LabelRotationTest extends TestCase
         }
     }
 
-    public function test_correct_letter_changes_every_round(): void
+    public function test_letters_in_order_and_correct_letters_vary(): void
     {
         $engine = app(ExamService::class);
         $seenByQuestion = [];
@@ -69,33 +70,50 @@ class LabelRotationTest extends TestCase
             $this->assertSame($round, (int) $attempt->label_rotation);
 
             $ae = $attempt->attemptExercises()->orderBy('position')->first();
+            $roundCorrect = [];
+
             foreach ($ae->formQuestions() as $question) {
+                // Lettres affichées : toujours dans l'ordre (a, b, c, d).
+                $labels = array_column($engine->displayOptionsForAttempt($question, $attempt), 'label');
+                $sorted = $labels;
+                sort($sorted);
+                $this->assertSame($sorted, $labels, 'Question #'.$question->id.' : lettres désordonnées.');
+
                 $shown = $engine->displayedCorrectLabels($question, $attempt);
                 $this->assertNotEmpty($shown);
+                $roundCorrect[] = $shown[0];
                 $seenByQuestion[$question->id][] = $shown[0];
+            }
+
+            // Diversité intra-tentative : les réponses justes portent des
+            // lettres différentes (pas toutes a, pas toutes la même).
+            if (count($roundCorrect) >= 3) {
+                $this->assertGreaterThan(
+                    1,
+                    count(array_unique($roundCorrect)),
+                    'Tour '.$round.' : toutes les bonnes réponses portent la même lettre.'
+                );
             }
 
             $this->playDisplayedPerfect($attempt->fresh());
             $this->assertSame('completed', $attempt->fresh()->status->value);
         }
 
-        // Chaque question vue 2+ fois a changé de lettre à chaque tour.
-        $checked = 0;
+        // D'une tentative à l'autre, au moins une question revue change de lettre.
+        $reviewed = $changed = 0;
         foreach ($seenByQuestion as $qid => $letters) {
             if (count($letters) < 2) {
                 continue;
             }
-            $checked++;
-            foreach (array_slice($letters, 1) as $i => $letter) {
-                $this->assertNotSame(
-                    $letters[$i], $letter,
-                    "Question #{$qid} : même lettre deux tours de suite."
-                );
+            $reviewed++;
+            if (count(array_unique($letters)) > 1) {
+                $changed++;
             }
         }
 
-        $this->assertGreaterThan(0, $checked, 'Aucune question revue sur 3 tours ?');
-        fwrite(STDERR, "\n[rotation] {$checked} questions revues, lettre différente à chaque tour\n");
+        $this->assertGreaterThan(0, $reviewed, 'Aucune question revue sur 3 tours ?');
+        $this->assertGreaterThan(0, $changed, 'Les lettres doivent changer entre les tours.');
+        fwrite(STDERR, "\n[rotation] {$changed}/{$reviewed} questions revues ont changé de lettre\n");
     }
 
     public function test_perfect_score_answering_displayed_letters(): void
