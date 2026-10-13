@@ -255,6 +255,12 @@ class ChallengeService
         return $challenge->refresh();
     }
 
+    /** L'échec du dernier appel IA est-il transitoire (429/413 quota, 5xx) → réessayer plus tard. */
+    public function lastErrorRetryable(): bool
+    {
+        return $this->gemini->lastRetryable();
+    }
+
     // ---------------------------------------------------------- interne
 
     /** Appelle l'IA (+1 relance de complétion si < min et échec non transitoire). */
@@ -299,11 +305,12 @@ class ChallengeService
 
         return 'Du bist ein erfahrener TestDaF-Autor. Du erstellst ORIGINELLE Leseverstehens-QCM '
             ."im TestDaF-Rahmen (universitäre Themen, Niveau {$level}, 4 Antwortoptionen a-d, genau EINE richtige). "
-            .'Antworte NUR mit gültigem JSON: ein Array von Objekten mit den Feldern '
+            .'Antworte NUR mit einem gültigen JSON-Objekt der Form {"questions": [ ... ]} (ein Array von Objekten) '
+            .'mit folgenden Feldern: '
             .'stimulus (kurzer deutscher Lesetext 40-70 Wörter, originell), prompt (Frage auf Deutsch), '
             .'options (Objekt mit EXAKT den Schlüsseln a, b, c, d), correct (einer von a, b, c, d), '
             .'explanation (kurz, Deutsch oder Französisch), difficulty (B2, C1 oder C1+). '
-            .'Keine Markdown-Codeblöcke, kein Fließtext außerhalb des JSON.';
+            .'Keine Markdown-Codeblöcke, kein Fließtext außerhalb des JSON-Objekts.';
     }
 
     private function buildPrompt(AiChallenge $challenge, int $min, string $nonce): string
@@ -328,7 +335,7 @@ class ChallengeService
     {
         return "Tu as fourni {$got} QCM valides, il en faut {$min} au total. "
             ."Ajoute UNIQUEMENT les ".($min - $got)." QCM MANQUANTS (thèmes inédits, génération #{$nonce}), "
-            .'même format JSON strict (array d\'objets stimulus/prompt/options/correct/explanation/difficulty).';
+            .'même format JSON strict (objet {"questions": [ ... ]} avec stimulus/prompt/options/correct/explanation/difficulty).';
     }
 
     /** Normalise/valide : enveloppe {questions:[...]} acceptée, items incomplets rejetés. */

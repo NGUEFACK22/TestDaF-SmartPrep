@@ -33,7 +33,7 @@ class GeminiService
     {
         $status = (int) ($this->lastError['status'] ?? 0);
 
-        return in_array($status, [408, 425, 429, 500, 502, 503, 504], true);
+        return in_array($status, [408, 413, 425, 429, 500, 502, 503, 504], true);
     }
 
     /**

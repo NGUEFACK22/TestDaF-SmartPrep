@@ -59,7 +59,7 @@ return [
         'gemini_api_key' => env('GEMINI_API_KEY'),
         'gemini_endpoint' => env('GEMINI_ENDPOINT', 'https://generativelanguage.googleapis.com/v1beta'),
         'groq_api_key' => env('GROQ_API_KEY'),
-        'groq_model' => env('GROQ_MODEL', 'openai/gpt-oss-20b'),
+        'groq_model' => env('GROQ_MODEL', 'qwen/qwen3.8-27b'),
         'groq_endpoint' => env('GROQ_ENDPOINT', 'https://api.groq.com/openai/v1'),
         'whisper_endpoint' => env('WHISPER_ENDPOINT'),
         'languagetool_url' => env('LANGUAGETOOL_API_URL', 'https://api.languagetool.org/v2'),
